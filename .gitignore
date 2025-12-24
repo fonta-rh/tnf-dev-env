@@ -1,0 +1,16 @@
+# Cloned repositories directory
+repos/
+
+# User configuration (generated from template)
+repos.txt
+
+# Editor/IDE files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
