@@ -15,7 +15,7 @@
 
 # Core TNF repositories
 https://github.com/openshift/enhancements.git | enhancements | master
-https://github.com/openshift/assisted-service.git | assisted-service | naster
+https://github.com/openshift/assisted-service.git | assisted-service | master
 https://github.com/openshift/cluster-etcd-operator.git | cluster-etcd-operator | main
 https://github.com/openshift/machine-config-operator.git | machine-config-operator | main
 https://github.com/openshift/cluster-baremetal-operator.git | cluster-baremetal-operator | main
