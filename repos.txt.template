@@ -20,6 +20,7 @@ https://github.com/openshift/cluster-etcd-operator.git | cluster-etcd-operator |
 https://github.com/openshift/machine-config-operator.git | machine-config-operator | main
 https://github.com/openshift/cluster-baremetal-operator.git | cluster-baremetal-operator | main
 https://github.com/ClusterLabs/resource-agents.git | resource-agents | main
+https://github.com/ClusterLabs/pacemaker.git | pacemaker | main
 https://github.com/openshift-metal3/dev-scripts.git | dev-scripts | master
 https://github.com/openshift-eng/two-node-toolbox.git | two-node-toolbox | main
 
