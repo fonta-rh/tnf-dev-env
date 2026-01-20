@@ -14,11 +14,52 @@ This workspace serves as a **TNF (Two Nodes with Fencing) development environmen
 
 **The `repos/` folder contains all source code.** This CLAUDE.md provides a summary of each repository's relevance to TNF, so Claude understands how to navigate and use them effectively.
 
+### Source of Truth Priority
+
+**IMPORTANT**: When answering questions or implementing changes related to TNF:
+1. **Always look at repos in this workspace FIRST** before using internal knowledge or web searches
+2. If a component has a repo here, that repo is the **authoritative source of truth**
+3. Code in `repos/` reflects the latest development state, which may differ from public documentation
+
+### Fork Model
+
+All repositories **except `two-node-toolbox`** use a fork model for contributions:
+- Push changes to your personal fork first, not directly to upstream
+- Create pull requests from your fork to the upstream repository
+- `two-node-toolbox` is an internal tool and can be pushed to directly
+
+### Repository Categories
+
+Repositories are grouped by their primary purpose:
+
+| Category | Repositories | Description |
+|----------|-------------|-------------|
+| **Docs** | `enhancements`, `openshift-docs` | Design specs and user-facing documentation |
+| **Testing** | `origin`, `release` | E2E tests and CI/CD configuration |
+| **Deployment** | `two-node-toolbox` | Primary TNF cluster deployment automation |
+| **Development** | `assisted-service`, `cluster-etcd-operator`, `machine-config-operator`, `installer`, `cluster-baremetal-operator`, `resource-agents`, `dev-scripts` | Core TNF component source code |
+| **Troubleshooting** | `pacemaker` | Upstream reference for debugging HA behavior |
+
+### Typical Tasks
+
+#### Exploration
+<!-- TODO: Add guidance for codebase exploration tasks -->
+
+#### Development
+<!-- TODO: Add guidance for development workflow tasks -->
+
+#### Troubleshooting
+<!-- TODO: Add guidance for debugging and troubleshooting tasks -->
+
+---
+
 ## Repositories
 
 All repositories are located in the `repos/` folder.
 
 ### enhancements (`repos/enhancements/`)
+**Category**: Docs
+
 **Purpose**: OpenShift enhancement proposals repository
 
 **TNF Relevance**: Contains the authoritative TNF enhancement document defining:
@@ -28,11 +69,21 @@ All repositories are located in the `repos/` folder.
 - Failure handling scenarios and recovery procedures
 - Integration between RHEL-HA stack and OpenShift
 
+**When to use this repo**:
+- Understanding design rationale and architectural decisions
+- Answering "why" questions about TNF behavior
+- Referencing the original design spec for component responsibilities
+
 **Key files**:
 - `enhancements/two-node-fencing/tnf.md` - Main enhancement document
-- `enhancements/two-node-fencing/*.svg` - Architecture flowcharts for etcd scenarios
+- `enhancements/two-node-fencing/etcd-flowchart-both-nodes-reboot-scenarios.svg` - Reboot scenarios flowchart
+- `enhancements/two-node-fencing/etcd-flowchart-gns-nogns-happy-paths.svg` - Happy path flowchart (GNS/non-GNS)
+
+**Enhancement proposal structure**: Documents follow a standard format with sections for Summary, Motivation, Goals, Non-Goals, Proposal, Design Details, Risks, and Alternatives. Navigate using these headings to find specific information.
 
 ### assisted-service (`repos/assisted-service/`)
+**Category**: Development
+
 **Purpose**: REST/Kubernetes API service that installs OpenShift clusters with minimal infrastructure prerequisites
 
 **TNF Relevance**: Core service orchestrating TNF cluster installation via MCE/ACM:
@@ -40,6 +91,8 @@ All repositories are located in the `repos/` folder.
 - Collects and stores fencing credentials (BMC username/password/address) per host
 - Generates install-config with fencing credentials for the installer
 - Handles TNF-specific network connectivity groups (minimum 2 hosts instead of 3)
+
+**Note**: This repo is also used as part of the **Agent Based Installation (ABI)** flow when installing via MCE/ACM. For standalone ABI without MCE/ACM, see the `installer` repository.
 
 **Key TNF code paths**:
 - `internal/common/common.go` - `IsClusterTopologyTwoNodesWithFencing()` detection logic
@@ -50,6 +103,19 @@ All repositories are located in the `repos/` folder.
 - `internal/featuresupport/features_misc.go` - TNF feature support level checks
 - `models/fencing_credentials_params.go` - BMC credential model
 - `docs/enhancements/tnf-clusters.md` - Assisted-service TNF enhancement doc
+
+**TNF-related test files**:
+- `internal/common/common_test.go`
+- `internal/cluster/validator_test.go`
+- `internal/cluster/transition_test.go`
+- `internal/installcfg/builder/builder_test.go`
+- `internal/host/host_test.go`
+- `internal/bminventory/inventory_test.go`
+- `internal/provider/baremetal/installConfig_test.go`
+- `internal/controller/controllers/agent_controller_test.go`
+- `internal/controller/controllers/bmh_agent_controller_test.go`
+- `cmd/agentbasedinstaller/host_config_test.go`
+- `subsystem/kubeapi/kubeapi_test.go`
 
 **Key constants** (from `internal/common/common.go`):
 - `MinimumVersionForTwoNodesWithFencing = "4.20"`
@@ -65,9 +131,11 @@ skipper make subsystem-test         # Run subsystem tests
 ```
 
 ### cluster-etcd-operator (`repos/cluster-etcd-operator/`)
+**Category**: Development
+
 **Purpose**: Manages etcd scaling during cluster bootstrap and operation, provisions TLS certificates
 
-**TNF Relevance**: Contains the TNF controller code that:
+**TNF Relevance**: **This is the heart of TNF**. Contains the TNF controller code that runs on the cluster after installation and orchestrates the transition to Pacemaker-managed etcd:
 - Initializes the Pacemaker cluster configuration
 - Transitions etcd management from CEO to RHEL-HA
 - Configures fencing using BMC credentials
@@ -75,10 +143,36 @@ skipper make subsystem-test         # Run subsystem tests
 
 **Key paths**:
 - `pkg/tnf/` - TNF-specific controllers and utilities
-  - `pkg/tnf/operator/` - TNF operator starter
-  - `pkg/tnf/pkg/pcs/` - Pacemaker cluster suite integration (fencing.go, etcd.go, cluster.go)
-  - `pkg/tnf/setup/`, `pkg/tnf/fencing/`, `pkg/tnf/auth/` - Setup phases
+  - `pkg/tnf/operator/starter.go` - TNF operator entry point
+  - `pkg/tnf/auth/runner.go` - Authentication phase
+  - `pkg/tnf/setup/runner.go` - Setup phase
+  - `pkg/tnf/fencing/runner.go` - Fencing configuration phase
+  - `pkg/tnf/after-setup/runner.go` - Post-setup phase
+  - `pkg/tnf/pkg/pcs/` - Pacemaker integration
+    - `cluster.go` - Cluster initialization
+    - `etcd.go` - etcd resource configuration
+    - `fencing.go` - STONITH/fencing setup
+    - `types.go` - Type definitions
+  - `pkg/tnf/pkg/config/` - Cluster configuration
+  - `pkg/tnf/pkg/etcd/` - etcd management
+  - `pkg/tnf/pkg/jobs/` - Job controller
+  - `pkg/tnf/pkg/tools/` - Utilities (conditions, secrets, redact, etc.)
 - `docs/HACKING.md` - Development guide
+
+**TNF controller phases** (executed in order):
+1. **auth** - Handles Pacemaker authentication between nodes (pcsd tokens)
+2. **setup** - Initializes Pacemaker cluster, configures resources
+3. **fencing** - Configures STONITH with BMC credentials
+4. **after-setup** - Post-setup tasks, hands etcd management to Pacemaker
+
+**TNF-related test files**:
+- `pkg/tnf/operator/starter_test.go`
+- `pkg/tnf/pkg/pcs/fencing_test.go`
+- `pkg/tnf/pkg/pcs/types_test.go`
+- `pkg/tnf/pkg/config/cluster_test.go`
+- `pkg/tnf/pkg/etcd/etcd_test.go`
+- `pkg/tnf/pkg/jobs/jobcontroller_test.go`
+- `pkg/tnf/pkg/tools/redact_test.go`
 
 **Commands**:
 ```bash
@@ -93,19 +187,32 @@ make test                     # Run tests
 ```
 
 ### machine-config-operator (`repos/machine-config-operator/`)
+**Category**: Development
+
 **Purpose**: Manages operating system configuration and updates (systemd, cri-o/kubelet, kernel, NetworkManager, etc.)
 
-**TNF Relevance**: Installs and configures Pacemaker/Corosync on RHCOS nodes:
+**TNF Relevance**: Prepares nodes for Pacemaker **BEFORE** CEO TNF controller runs (Day 1 setup):
 - Directory structure for PCS and Corosync (`/var/lib/pcsd`, `/var/lib/corosync`, `/var/log/pcsd`, `/var/log/cluster`)
 - Systemd units to enable and start PCSD service
 - Fencing validator script for cluster health checking
+- Installs HA packages via rpm-ostree extensions
 
 **Key TNF paths**:
 - `templates/master/00-master/two-node-with-fencing/` - TNF-specific templates
   - `units/ha-00-directories.service.yaml` - Creates directories for PCS/Corosync
   - `units/ha-01-enable-services.service.yaml` - Enables and starts PCSD
   - `files/fencing-validator.yaml` - Fencing validation script
-  - `extensions/` - MCO extensions for HA packages
+  - `extensions/two-node-ha` - MCO extension trigger file
+
+**MCO Extensions concept**: Extensions install RPM packages on RHCOS via rpm-ostree:
+- The `two-node-ha` extension installs pacemaker, corosync, pcs, fence-agents, and related packages
+- Extensions are triggered by filename presence (the file content doesn't matter, just the file existing)
+- This happens during node configuration, before CEO runs
+
+**TNF-related test files**:
+- `test/e2e-2of2/extension_test.go`
+- `pkg/daemon/update_test.go`
+- `pkg/controller/common/helpers_test.go`
 
 **Commands**:
 ```bash
@@ -121,19 +228,33 @@ oc describe machineconfigpool
 ```
 
 ### installer (`repos/installer/`)
+**Category**: Development
+
 **Purpose**: OpenShift cluster installation tool supporting multiple platforms
 
-**TNF Relevance**: Generates initial cluster configuration. The Agent-Based Installer (ABI) is one of the supported installation paths for TNF:
+**TNF Relevance**: Main repo for **standalone Agent-Based Installation (ABI)** without MCE/ACM:
 - Reads install-config.yaml with fencing credentials
 - Generates ignition configs for the cluster
 - Handles bootstrap process where one node serves as temporary bootstrap
+- Contains its own fencing credentials handling for ABI flow
 
 **Key paths**:
 - `pkg/asset/agent/` - Agent-Based Installer implementation
+- `pkg/asset/agent/manifests/fencingcredentials.go` - Fencing credentials handling for ABI
 - `pkg/types/validation/installconfig.go` - Install config validation
 - `pkg/types/machinepools.go` - Machine pool definitions
 
-**Note**: TNF-specific logic is primarily in assisted-service; the installer consumes the generated configs.
+**Note**: Two installation paths exist for TNF:
+1. **Standalone ABI** (this repo) - Direct installation without MCE/ACM, uses `openshift-install` directly
+2. **MCE/ACM with assisted-service** - Uses assisted-service to orchestrate installation
+
+Both paths require fencing credentials in install-config.yaml.
+
+**TNF-related test files**:
+- `pkg/asset/agent/manifests/fencingcredentials_test.go`
+- `pkg/asset/agent/installconfig_test.go`
+- `pkg/types/validation/installconfig_test.go`
+- `pkg/asset/machines/master_test.go`
 
 **Commands**:
 ```bash
@@ -143,9 +264,13 @@ openshift-install destroy cluster    # Destroy cluster
 ```
 
 ### cluster-baremetal-operator (`repos/cluster-baremetal-operator/`)
+**Category**: Development
+
 **Purpose**: Deploys and manages baremetal server provisioning components (metal3.io)
 
 **TNF Relevance**: Manages bare metal host provisioning. For TNF, BMO must avoid power-management conflicts with Pacemaker fencing on control-plane nodes (Pacemaker handles fencing, not BMO).
+
+**Note**: No TNF-specific code exists in this repo. The TNF relationship is purely about awareness - CBO/BMO should not attempt to power-manage control-plane nodes that are under Pacemaker's control.
 
 **Key paths**:
 - `api/v1alpha1/provisioning_types.go` - Provisioning CR definitions
@@ -160,6 +285,8 @@ make deploy     # Deploy to cluster
 ```
 
 ### resource-agents (`repos/resource-agents/`)
+**Category**: Development
+
 **Purpose**: OCF-compliant resource agents for Pacemaker and rgmanager
 
 **TNF Relevance**: Contains the `podman-etcd` resource agent that Pacemaker uses to control etcd after CEO hands it over:
@@ -180,6 +307,11 @@ make deploy     # Deploy to cluster
 - `reconcile_member_state()` - Promotes learners, reconciles cluster
 - `container_health_check()` - Advanced health monitoring
 
+**Testing**: **IMPORTANT** - No unit tests exist for podman-etcd. Testing must be done on a live TNF cluster:
+- Use `make patch-nodes` in `two-node-toolbox` (from `deploy/` directory)
+- This builds the modified resource-agents RPM and deploys it to cluster nodes
+- See `two-node-toolbox/helpers/build-and-patch-resource-agents.yml` for the patching playbook
+
 **Build**:
 ```bash
 ./autogen.sh
@@ -188,7 +320,9 @@ make
 ```
 
 ### pacemaker (`repos/pacemaker/`)
-**Purpose**: High-availability cluster resource manager from ClusterLabs
+**Category**: Troubleshooting
+
+**Purpose**: High-availability cluster resource manager from ClusterLabs (upstream)
 
 **TNF Relevance**: Core component of the RHEL-HA stack that provides:
 - Cluster resource management and orchestration
@@ -197,14 +331,21 @@ make
 - Integration with Corosync for membership and messaging
 - Execution of OCF resource agents (like podman-etcd)
 
-**Key TNF paths**:
+**Note**: This is **upstream Pacemaker** included for reference only:
+- TNF uses Pacemaker but will **NOT modify it** - changes go to RHEL packages
+- Useful for understanding HA internals when troubleshooting
+- Also helpful for resource-agents development (understanding how Pacemaker invokes OCF agents)
+- In production, Pacemaker comes from RHEL-HA packages, not built from this source
+
+**Key paths** (for troubleshooting/understanding):
 - `daemons/fenced/` - STONITH/fencing daemon (executes BMC power operations)
 - `daemons/controld/` - CRM controller (handles fencing requests, Corosync events)
+- `daemons/controld/controld_fencing.c` - Fencing request handling
 - `lib/fencing/` - Fencing API library
 
 **Note**: Pacemaker configuration options (stonith-enabled, no-quorum-policy, etc.) are set automatically by CEO's TNF controller - see `cluster-etcd-operator/pkg/tnf/pkg/pcs/`.
 
-**Commands**:
+**Commands** (for reference):
 ```bash
 ./autogen.sh && ./configure && make   # Build
 make check                            # Run tests
@@ -213,23 +354,40 @@ make check                            # Run tests
 **Documentation**: https://clusterlabs.org/pacemaker/doc/
 
 ### openshift-docs (`repos/openshift-docs/`)
-**Purpose**: Official OpenShift documentation in AsciiDoc format
+**Category**: Docs
+
+**Purpose**: Official OpenShift documentation in AsciiDoc format (becomes docs.openshift.com)
 
 **TNF Relevance**: Contains user-facing documentation for TNF installation and operation
 
 **Key paths**:
 - `installing/installing_two_node_cluster/` - Two-node cluster installation guides
-- `installing/installing_two_node_cluster/installing_tnf/` - TNF-specific installation docs
+- `installing/installing_two_node_cluster/installing_tnf/` - TNF-specific docs:
+  - `install-tnf.adoc` - Installation guide
+  - `install-post-tnf.adoc` - Post-installation tasks
+  - `installing-two-node-fencing.adoc` - Fencing setup
 - `modules/installation-two-node-*` - Modular content about TNF
 
-**Note**: Documentation is in AsciiDoc (`.adoc`) format with includes/snippets pattern.
+**Documentation structure**:
+- Uses AsciiDoc (`.adoc`) format
+- **Assemblies** (topic directories) include content from **modules** (reusable snippets)
+- Modules in `modules/` are included via `include::` directives
+- This repo is the source for https://docs.openshift.com
 
 ### dev-scripts (`repos/dev-scripts/`)
+**Category**: Development
+
 **Purpose**: Development and testing environment scripts for deploying OpenShift on libvirt VMs with virtualbmc
 
 **TNF Relevance**: Primary tool for creating TNF development and testing clusters locally or in CI:
 - Configures libvirt VMs with virtualbmc to simulate baremetal nodes
 - Enables full TNF deployment including Redfish-based fencing
+
+**Relationship to two-node-toolbox**:
+- `two-node-toolbox` (TNT) **wraps dev-scripts** for simplified deployment
+- This repo is for development/modification of the deployment scripts themselves
+- When TNT deployments fail, often need to look here to understand what went wrong
+- Also useful for troubleshooting TNT installation issues (since TNT uses dev-scripts under the hood)
 
 **TNF-specific configuration**:
 
@@ -297,9 +455,11 @@ make agent
 - Pull secret from cloud.redhat.com
 
 ### two-node-toolbox (`repos/two-node-toolbox/`)
+**Category**: Deployment
+
 **Purpose**: Deployment automation framework for two-node OpenShift clusters in development and testing environments
 
-**TNF Relevance**: Primary tool for TNF developers/QA to quickly deploy and manage TNF clusters:
+**TNF Relevance**: **THE go-to tool** for TNF developers/QA. One-stop-shop for cluster lifecycle:
 - Automates AWS EC2 hypervisor provisioning via CloudFormation
 - Supports "Bring Your Own Server" workflow for existing RHEL 9 hosts
 - Wraps dev-scripts and kcli for simplified cluster deployment
@@ -310,16 +470,25 @@ make agent
 **Deployment options**:
 - **AWS Hypervisor**: Automated EC2 instance creation and cluster deployment
 - **External Host**: Use existing RHEL 9 server with Ansible playbooks
-- **dev-scripts method**: Traditional deployment (arbiter and fencing topologies)
+- **dev-scripts method**: Traditional deployment (fencing topology)
 - **kcli method**: Modern deployment with simplified VM management (fencing only)
 
 **Key paths**:
 - `deploy/` - Main deployment automation directory
   - `deploy/aws-hypervisor/` - AWS CloudFormation and instance lifecycle scripts
-  - `deploy/openshift-clusters/` - Ansible playbooks for cluster deployment
+  - `deploy/openshift-clusters/` - Ansible playbooks (setup.yml, clean.yml, redeploy.yml)
   - `deploy/openshift-clusters/roles/` - Ansible roles (dev-scripts, kcli, redfish, proxy)
+- `helpers/` - Utility scripts:
+  - `build-and-patch-resource-agents.yml` - For patching resource-agents on live clusters
+  - `collect-tnf-logs.yml` - Log collection playbook
+  - `fencing_validator.sh` - Fencing validation script
 - `docs/fencing/` - TNF-specific documentation
-- `helpers/` - Utility scripts
+
+**Cross-references**:
+- **dev-scripts**: TNT wraps dev-scripts; look there for underlying deployment logic
+- **resource-agents**: Use `make patch-nodes` to test podman-etcd changes on live clusters
+
+**Troubleshooting note**: For cluster troubleshooting, there is an etcd-troubleshooting Claude skill with helpers. Check the `helpers/` directory for troubleshooting utilities.
 
 **Commands** (from `deploy/` directory):
 ```bash
@@ -357,6 +526,8 @@ ansible-playbook setup.yml -i inventory.ini      # Deploy cluster
 - CI_TOKEN for CI builds
 
 ### origin (`repos/origin/`)
+**Category**: Testing
+
 **Purpose**: OpenShift extended test suite and E2E testing framework
 
 **TNF Relevance**: Contains the comprehensive TNF E2E test suite:
@@ -372,7 +543,12 @@ ansible-playbook setup.yml -i inventory.ini      # Deploy cluster
   - `tnf_recovery.go` - Recovery scenario testing
   - `tnf_node_replacement.go` - Node replacement tests
   - `tnf_degraded.go` - Degraded mode testing
-- `test/extended/two_node/utils/` - Test utilities
+- `test/extended/two_node/utils/common.go` - Test utilities
+
+**Running tests**:
+- Tests require a **running TNF cluster** - they are E2E tests that interact with real cluster
+- Tests are typically run via CI (see `release` repo for job configurations)
+- For local execution, need `KUBECONFIG` pointing to a TNF cluster
 
 **Test execution**:
 ```bash
@@ -381,6 +557,8 @@ openshift-tests run openshift/two-node --run "name" # Run specific test
 ```
 
 ### release (`repos/release/`)
+**Category**: Testing
+
 **Purpose**: OpenShift CI/CD configuration repository for Prow jobs and test workflows
 
 **TNF Relevance**: Central orchestration point for TNF CI testing:
@@ -388,19 +566,44 @@ openshift-tests run openshift/two-node --run "name" # Run specific test
 - Step registry workflows for TNF scenarios
 - Cluster profiles for TNF testing environments
 
+**How OpenShift CI works**:
+- **Prow**: Kubernetes-based CI system that runs jobs
+- **ci-operator**: OpenShift-specific test orchestrator
+- **Step registry**: Reusable test steps, chains, and workflows
+- Workflows compose steps for full test scenarios
+
 **Key TNF paths**:
-- `ci-operator/config/` - CI operator configurations for TNF-related repos
-- `ci-operator/step-registry/` - Reusable test steps and workflows
+- `ci-operator/step-registry/baremetalds/two-node/fencing/` - TNF step registry workflows:
   - `baremetalds-two-node-fencing-workflow.yaml` - Main TNF workflow
+  - `extended/` - Extended test workflow
+  - `techpreview/` - Tech preview workflow
+  - `upgrade/` - Upgrade workflow
+  - `post-install/` - Post-install validation and node degradation tests
+- `ci-operator/jobs/openshift/` - Presubmit/periodic job configurations:
+  - `cluster-etcd-operator/` - CEO presubmit jobs
+  - `machine-config-operator/` - MCO presubmit jobs
+  - `installer/` - Installer presubmit jobs
+  - `origin/` - Origin presubmit jobs
 
 ---
 
 ## TNF Architecture Overview
 
 ```
+                         INSTALLATION PATHS
+    +------------------+  +------------------+  +------------------+
+    | Assisted Inst.   |  | Agent-Based Inst.|  |   IPI Installer  |
+    |   (MCE/ACM)      |  | (openshift-inst) |  |                  |
+    +--------+---------+  +--------+---------+  +--------+---------+
+             |                     |                     |
+             +---------------------+---------------------+
+                                   |
+                                   v
                     +---------------------------------------------+
-                    |         Assisted Installer / MCE            |
-                    |  (orchestrates initial cluster setup)       |
+                    |     machine-config-operator (MCO)           |
+                    |   - Installs HA packages (pacemaker, pcs)   |
+                    |   - Creates directories, enables PCSD       |
+                    |   - Prepares nodes BEFORE CEO runs          |
                     +----------------------+----------------------+
                                            |
                     +----------------------v----------------------+
@@ -420,29 +623,9 @@ openshift-tests run openshift/two-node --run "name" # Run specific test
                                            |
                                +-----------v-----------+
                                |     BMC Fencing       |
-                               |   (Redfish/IPMI)      |
+                               |     (Redfish)         |
                                +-----------------------+
 ```
-
-## TNF Installation Flow (via Assisted Installer)
-
-1. **User creates cluster via ACM/MCE** with 2 control-plane nodes
-2. **assisted-service validates** the configuration:
-   - Exactly 2 CP nodes, no arbiters, no workers initially
-   - OCP version >= 4.20
-   - Both hosts have fencing credentials (BMC address/username/password)
-   - Platform is `baremetal` or `none`
-3. **assisted-service generates install-config** with fencing credentials
-4. **Bootstrap phase**: One node serves as bootstrap, etcd runs as 2-member cluster
-5. **Bootstrap teardown**: Bootstrap node removed from etcd, reboots as control-plane
-6. **MCO applies TNF MachineConfigs**:
-   - Creates directories for PCS/Corosync
-   - Enables and starts PCSD service
-7. **CEO TNF controller initializes RHEL-HA**:
-   - Initializes Pacemaker cluster
-   - Configures fencing with BMC credentials
-   - Transitions etcd management to podman-etcd OCF agent
-8. **Pacemaker takes over**: Now manages etcd, cri-o, kubelet with fencing protection
 
 ## Key TNF Concepts
 
@@ -463,6 +646,7 @@ openshift-tests run openshift/two-node --run "name" # Run specific test
 ## Key Version Requirements
 
 - **OCP minimum version for TNF**: 4.20
+- **BMC protocol**: Redfish required (only supported BMC protocol for TNF fencing)
 - **Fencing credentials required**: BMC address, username, password for both nodes
 - **Platform support**: `baremetal` or `none` only
 
