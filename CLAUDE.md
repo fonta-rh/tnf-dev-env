@@ -347,8 +347,26 @@ make
 
 **Commands** (for reference):
 ```bash
-./autogen.sh && ./configure && make   # Build
-make check                            # Run tests
+# Build
+./autogen.sh
+./configure
+make
+sudo make install
+
+# Run tests
+make check                 # Run all tests
+```
+
+**Diagnostic commands** (on TNF nodes):
+```bash
+sudo pcs status            # Show cluster status (nodes, resources, failures)
+sudo pcs config            # Show full cluster configuration (human-friendly)
+sudo pcs resource config   # Show resource configuration
+sudo pcs stonith config    # Show fencing resource configuration
+sudo pcs stonith history   # Show fence history
+sudo pcs cluster cib       # Show raw CIB (XML format)
+sudo pcs status corosync   # Show Corosync membership and quorum
+sudo pcs property          # Show cluster properties
 ```
 
 **Documentation**: https://clusterlabs.org/pacemaker/doc/
@@ -656,9 +674,14 @@ openshift-tests run openshift/two-node --run "name" # Run specific test
 
 **On TNF cluster nodes**:
 ```bash
-# Pacemaker status
-sudo pcs status
-sudo crm_mon -1              # One-time cluster status
+# Check Pacemaker cluster status
+sudo pcs status                # Full cluster status (nodes, resources, failures)
+sudo pcs config                # Human-readable cluster configuration
+sudo pcs resource config       # Resource configuration details
+sudo pcs stonith config        # Fencing device configuration
+sudo pcs stonith history       # Fence operation history
+sudo pcs status corosync       # Corosync membership and quorum
+sudo pcs property              # Cluster properties
 
 # Fencing/STONITH
 sudo stonith_admin -l        # List STONITH devices
