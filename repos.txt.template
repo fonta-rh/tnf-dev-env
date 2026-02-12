@@ -1,7 +1,14 @@
-# TNF Repositories Configuration
-# ===============================
+# DEPRECATED: Use dev-env.yaml instead
+# =====================================
 #
-# Format: repo_url | directory | branch
+# This file is kept for backwards compatibility. New environments should use:
+#
+#   ./setup.sh init <preset>    # Initialize from a preset (e.g., ./setup.sh init tnf)
+#   cp dev-env.yaml.template dev-env.yaml  # Or start from the YAML template
+#
+# See dev-env.yaml.template for the new YAML schema.
+#
+# Legacy Format: repo_url | directory | branch
 #
 # - Lines starting with # are comments
 # - Empty lines are ignored

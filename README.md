@@ -1,50 +1,74 @@
-# TNF Development Environment
+# Dev Environment Generator
 
-A workspace template for developing and testing **Two Nodes with Fencing (TNF)** - an OpenShift topology providing high availability with two control plane nodes using RHEL-HA (Pacemaker/Corosync).
+A reusable scaffolding tool for multi-repo OpenShift development environments. Define which repositories you need in a YAML config, and this tool clones, organizes, and provides AI-assisted context for your entire workspace.
+
+Ships with a **preset system** for common development scenarios — start with a preset or build your own custom environment.
 
 ## Quick Start
 
 ```bash
 # Clone this repo as your workspace
-git clone https://github.com/your-org/tnf-dev-env.git
+git clone <your-fork-url>
 cd tnf-dev-env
 
-# Clone all TNF-related repositories
-./setup.sh
+# Option A: Initialize from a preset
+./setup.sh init tnf          # Sets up the TNF (Two Nodes with Fencing) environment
+
+# Option B: Start from scratch
+cp dev-env.yaml.template dev-env.yaml
+# Edit dev-env.yaml with your repos, then:
+./setup.sh clone
 ```
 
 ## How It Works
 
-All TNF source repositories are cloned into the `repos/` folder. The `CLAUDE.md` file provides Claude Code with context about each repository's role in TNF, enabling AI-assisted development across the entire codebase.
-
-**Workflow:**
-1. Work with Claude from this top-level directory for cross-repo context
-2. Navigate into `repos/<repo-name>/` to implement changes
-3. Use `./setup.sh update` to pull latest changes
+1. **`dev-env.yaml`** defines which repos to clone (name, URL, branch, category, summary)
+2. **`setup.sh`** manages cloning, updating, and status checking
+3. **`CLAUDE.md`** gives Claude Code cross-repo context for AI-assisted development
+4. **Presets** (`presets/`) provide ready-made configs with documentation and per-repo context
+5. **Projects** (`projects/`) give structured workspaces for specific tasks
 
 ## Setup Script Commands
 
 | Command | Description |
 |---------|-------------|
-| `./setup.sh` | Clone all repositories (first-time setup) |
+| `./setup.sh init <preset>` | Initialize from a preset (copies config, clones repos) |
+| `./setup.sh clone` | Clone all repos defined in `dev-env.yaml` |
 | `./setup.sh update` | Pull latest changes for all repos |
 | `./setup.sh status` | Show clone status and current branches |
 | `./setup.sh list` | List configured repositories |
 
+## Available Presets
+
+| Preset | Description |
+|--------|-------------|
+| `tnf` | Two Nodes with Fencing — OpenShift HA with Pacemaker/Corosync (14 repos) |
+
+Create your own preset by adding a directory under `presets/` with a `preset.yaml`, `dev-env.yaml`, and optional `context/` and `docs/` directories.
+
+## Claude Code Skills
+
+| Skill | Description |
+|-------|-------------|
+| `/dev-env setup` | Initialize or refresh a dev environment from a preset or custom config |
+| `/project new` | Create a structured project workspace for a specific task |
+| `/project resume` | Resume an existing project with full context reload |
+
 ## Configuration
 
-Edit `repos.txt` to customize which repositories to clone and which branches to use. The file is created from `repos.txt.template` on first run.
+The `dev-env.yaml` file uses a simple schema:
 
-## Included Repositories
+```yaml
+repos:
+  - name: my-repo
+    url: https://github.com/org/my-repo.git
+    directory: my-repo
+    branch: main
+    category: development    # docs, development, testing, deployment, troubleshooting
+    summary: "Brief description of the repo's role"
+```
 
-- **two-node-toolbox** - Deployment automation (AWS/external host, dev-scripts/kcli)
-- **assisted-service** - Cluster installation orchestration
-- **cluster-etcd-operator** - etcd management and TNF handover
-- **machine-config-operator** - Pacemaker/Corosync configuration
-- **resource-agents** - podman-etcd OCF agent
-- **dev-scripts** - Low-level cluster deployment scripts
-- **origin** - E2E test suite
-- And more (see `CLAUDE.md` for details)
+See `dev-env.yaml.template` for the full commented schema.
 
 ## Requirements
 
