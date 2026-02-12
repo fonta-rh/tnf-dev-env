@@ -1,13 +1,13 @@
 ---
 name: project
-description: Create and manage project workspaces for TNF development tasks
+description: Create and manage project workspaces for development tasks
 argument-hint: <new|resume> [description]
 user-invocable: true
 ---
 
 # Project Workspace Manager
 
-You are helping a TNF developer manage project workspaces. Projects live
+You are helping a developer manage project workspaces. Projects live
 under the `projects/` directory and provide structured working environments
 for specific tasks (bug investigations, feature development, CI work, etc.).
 
@@ -63,23 +63,16 @@ say 'no'."
 
 **1d. Related Repositories**
 
-Ask which repos from this workspace are relevant. Use AskUserQuestion
-with multiSelect=true and these options (from the workspace CLAUDE.md):
+Ask which repos from this workspace are relevant. **Dynamically load
+the repo list** from `dev-env.yaml` at the workspace root:
 
-- `enhancements` — Design specs / enhancement proposals
-- `api` — API types, FeatureGates, CRDs
-- `assisted-service` — Assisted Installer service
-- `cluster-etcd-operator` — etcd operator / TNF controller
-- `machine-config-operator` — OS configuration / HA package setup
-- `installer` — Agent-Based Installer
-- `cluster-baremetal-operator` — Bare metal provisioning
-- `resource-agents` — OCF resource agents (podman-etcd)
-- `pacemaker` — Upstream HA reference
-- `origin` — E2E test suite
-- `release` — CI/CD job configuration
-- `two-node-toolbox` — Deployment automation
-- `dev-scripts` — Dev environment scripts
-- `openshift-docs` — User-facing documentation
+1. Read `dev-env.yaml` and extract each repo's `name` and `summary`
+   fields from the `repos:` array.
+2. Build AskUserQuestion options with multiSelect=true, using
+   `name` as the label and `summary` as the description.
+3. If `dev-env.yaml` does not exist or has no repos, skip this step
+   and note that no repos are configured (the user can add them
+   later by editing the project's CLAUDE.md frontmatter).
 
 **1e. Additional Context (optional)**
 
@@ -207,6 +200,23 @@ If neither CLAUDE.md nor README.md exists:
 In all cases, list all files in the project directory (recursively) using
 the Bash tool (`find projects/<name>/ -type f | sort`). This gives both
 you and the user a picture of what's in the project.
+
+**2e. Auto-load repo context**
+
+If the project's frontmatter contains a `repos` list (non-empty), load
+context for each repo to prime your understanding of the codebase:
+
+1. For each repo name in the `repos` list:
+   a. First, check if `repos/<repo>/CLAUDE.md` exists. If so, read it.
+   b. Otherwise, search for `presets/*/context/<repo>.md`. If found,
+      read the first match.
+   c. If neither exists, skip silently (the repo may not have context
+      files yet).
+2. After loading, briefly note to the user which repo context files
+   were loaded (e.g., "Loaded context for: cluster-etcd-operator,
+   installer").
+3. Do NOT load context for repos not listed in the project's
+   frontmatter — only load what's relevant to this project.
 
 ### Step 3: Present Project Summary
 
@@ -341,7 +351,7 @@ related_links:
 - [ ] Identify root cause
 - [ ] Determine fix approach
 - [ ] Implement fix
-- [ ] Test on TNF cluster
+- [ ] Test on cluster
 - [ ] Submit PR
 
 ## Progress
@@ -383,7 +393,7 @@ related_links:
 
 ### Architecture
 
-*(Describe how this feature fits into the TNF architecture)*
+*(Describe how this feature fits into the project architecture)*
 
 ### API Changes
 
@@ -434,7 +444,7 @@ related_links:
 
 - **Jira**: <URL>
 - **CI Job(s)**: *(link to relevant Prow jobs)*
-- **Test Suite**: *(e.g., openshift/two-node)*
+- **Test Suite**: *(e.g., e2e, integration)*
 
 ## CI Job Links
 
@@ -609,8 +619,9 @@ CLAUDE.md "Suggested Skills" section:
 - The YAML frontmatter `status` field should always start as `active`
 - Use today's date for the `created` field
 - When populating the "Related Source Code" table:
-  - For each selected repo, check the workspace CLAUDE.md for "Key
-    paths", "Key TNF paths", or "Key files" sections
+  - For each selected repo, check `repos/<repo>/CLAUDE.md` or
+    `presets/*/context/<repo>.md` for "Key paths", "Key files",
+    or similar sections
   - If found, add 1-3 most relevant paths to the table
   - If not found, add the repo name with an empty path and a TODO
     comment like "TODO: fill in relevant paths"

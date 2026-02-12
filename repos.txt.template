@@ -28,4 +28,4 @@ https://github.com/openshift-eng/two-node-toolbox.git | two-node-toolbox | main
 https://github.com/openshift/installer.git | installer | main
 https://github.com/openshift/openshift-docs.git | openshift-docs | main
 https://github.com/openshift/origin.git | origin | main
-https://github.com/openshift/release.git | release | master
+https://github.com/openshift/release.git | release | main
