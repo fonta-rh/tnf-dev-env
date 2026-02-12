@@ -32,20 +32,8 @@ All repositories use a fork model for contributions:
 
 | Name | Category | Summary |
 |------|----------|---------|
-| `enhancements` | docs | Enhancement proposals — contains the authoritative TNF design spec |
-| `api` | development | API types, FeatureGates (DualReplica), PacemakerCluster CRD |
-| `assisted-service` | development | Assisted Installer service — TNF cluster installation via MCE/ACM |
-| `cluster-etcd-operator` | development | etcd operator — THE heart of TNF (Pacemaker init, fencing, etcd handover) |
-| `machine-config-operator` | development | OS config — installs HA packages, creates dirs, enables PCSD (Day 1) |
-| `installer` | development | OpenShift installer — standalone Agent-Based Installation with fencing |
-| `cluster-baremetal-operator` | development | Bare metal provisioning — must avoid power-management conflicts with Pacemaker |
-| `resource-agents` | development | OCF resource agents — contains podman-etcd agent for Pacemaker-managed etcd |
-| `pacemaker` | troubleshooting | Upstream HA cluster manager — reference only for debugging |
-| `openshift-docs` | docs | Official OpenShift documentation (AsciiDoc) — TNF install/operation guides |
-| `dev-scripts` | development | Dev/test environment scripts — libvirt VMs with virtualbmc for TNF clusters |
-| `two-node-toolbox` | deployment | THE go-to deployment tool — wraps dev-scripts, AWS provisioning, cluster lifecycle |
-| `origin` | testing | E2E test suite — TNF topology, recovery, node replacement, degraded mode tests |
-| `release` | testing | CI/CD configuration — Prow jobs, step registry workflows for TNF scenarios |
+
+> **No repos configured yet.** Run `/dev-env setup` to initialize from a preset, or create a custom `dev-env.yaml` from the template.
 
 ## Skills
 
@@ -57,7 +45,6 @@ All repositories use a fork model for contributions:
 
 ## Preset Docs
 
-For architecture details, debugging commands, and domain concepts, see the active preset's docs:
-- `presets/tnf/docs/architecture.md` — TNF architecture diagram, key concepts, failure scenarios
-- `presets/tnf/docs/debugging.md` — Pacemaker, etcd, and cluster diagnostic commands
-- `presets/tnf/context/<repo>.md` — Per-repo TNF-specific context (loaded on demand)
+For architecture details, debugging commands, and domain concepts, see the active preset's docs under `presets/<name>/`:
+- `presets/<name>/docs/` — Architecture diagrams, debugging guides, domain concepts
+- `presets/<name>/context/<repo>.md` — Per-repo context files (loaded on demand by `/project resume`)

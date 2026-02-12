@@ -12,12 +12,12 @@
 #
 # Schema:
 #   repos:
-#     - name: <repo-name>           # Short name (used as identifier)
+#     - name: <repo-name>           # Short name (used as identifier and directory name)
 #       url: <git-url>              # Full git clone URL
-#       directory: <dir-name>       # Directory name under repos/
 #       branch: <branch>            # Branch to clone (main, master, tag, etc.)
 #       category: <category>        # One of: docs, development, testing, deployment, troubleshooting
 #       summary: <one-liner>        # Brief description of the repo's role
+#       directory: <dir-name>       # (Optional) Directory name under repos/ — defaults to name
 #
 # All repos are cloned using --filter=blob:none (blobless clone):
 #   - Full repo structure visible, all files accessible
@@ -28,7 +28,6 @@ repos:
   # Example entry:
   # - name: my-repo
   #   url: https://github.com/org/my-repo.git
-  #   directory: my-repo
   #   branch: main
   #   category: development
   #   summary: "Description of what this repo does"

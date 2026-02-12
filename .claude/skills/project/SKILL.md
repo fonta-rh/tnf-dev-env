@@ -139,8 +139,8 @@ Write a `.gitignore` at `projects/<folder-name>/.gitignore` with:
 After creating the project, provide a summary:
 
 1. List the files and directories created
-2. Suggest relevant skills based on the task type (see
-   [Skill Suggestions](#skill-suggestions))
+2. Suggest relevant skills based on the task type (see the
+   type-to-skill mapping in Resume Step 4b)
 3. Suggest concrete next steps for starting the work
 4. Remind the user they can resume this project later with
    `/project resume`
@@ -260,8 +260,7 @@ action. For example:
 
 **4b. Skill suggestions**
 
-Suggest relevant skills based on the project type, using the same
-mapping as in [Skill Suggestions](#skill-suggestions):
+Suggest relevant skills based on the project type:
 
 | Type | Skills to suggest |
 |------|-------------------|
@@ -309,302 +308,71 @@ related_links:
 ---
 ```
 
-### Bug Investigation Template
-
-```markdown
-# <Title from JIRA or description>
-
-## Bug Summary
-
-**<One-line summary>**
-
-<Expanded description from user input>
-
-- **Jira**: <URL>
-- **Priority**: TBD
-- **Component**: <Component if known>
-- **Affected Version**: TBD
-- **Assignee**: TBD
-
-## Attachments
-
-| File | Description |
-|------|-------------|
-| *(add log files, screenshots, etc. here)* | |
-
-## Timeline
-
-```
-(Reconstruct key events from logs here)
-```
-
-## Investigation Findings
-
-*(Document findings as investigation progresses)*
-
-## Root Cause
-
-*(To be determined)*
-
-## Fix Plan
-
-- [ ] Identify root cause
-- [ ] Determine fix approach
-- [ ] Implement fix
-- [ ] Test on cluster
-- [ ] Submit PR
-
-## Progress
-
-- [x] Project created
-- [ ] Bug details captured
-- [ ] Logs collected and analyzed
-- [ ] Root cause identified
-- [ ] Fix implemented
-- [ ] PR submitted
-
-## Related Source Code
-
-| Repo | Key Path | Purpose |
-|------|----------|---------|
-| *(fill in relevant code paths)* | | |
-
-## Suggested Skills
-
-<Insert from skill suggestions table>
-```
-
-### Feature Development Template
-
-```markdown
-# <Feature Title>
-
-## Feature Summary
-
-<Description from user input>
-
-- **Jira**: <URL>
-- **Target Version**: TBD
-- **Enhancement**: *(link to enhancement doc if applicable)*
-
-## Design Notes
-
-*(Document design decisions, alternatives considered, etc.)*
-
-### Architecture
-
-*(Describe how this feature fits into the project architecture)*
-
-### API Changes
-
-*(Any new or modified APIs, CRDs, FeatureGates)*
-
-## Implementation Plan
-
-- [ ] Review enhancement doc (if exists)
-- [ ] Design approach
-- [ ] Implement changes
-- [ ] Write tests
-- [ ] Submit PR(s)
-
-## Related PRs
-
-| PR | Repo | Status | Description |
-|----|------|--------|-------------|
-| *(track PRs here)* | | | |
-
-## Progress
-
-- [x] Project created
-- [ ] Design documented
-- [ ] Implementation started
-- [ ] Tests written
-- [ ] PR(s) submitted
-- [ ] PR(s) merged
-
-## Related Source Code
-
-| Repo | Key Path | Purpose |
-|------|----------|---------|
-| *(fill in relevant code paths)* | | |
-
-## Suggested Skills
-
-<Insert from skill suggestions table>
-```
-
-### CI/Testing Template
-
-```markdown
-# <Test/CI Task Title>
-
-## Test Summary
-
-<Description from user input>
-
-- **Jira**: <URL>
-- **CI Job(s)**: *(link to relevant Prow jobs)*
-- **Test Suite**: *(e.g., e2e, integration)*
-
-## CI Job Links
-
-| Job | Status | Link |
-|-----|--------|------|
-| *(track CI jobs here)* | | |
-
-## Test Failures
-
-*(Document test failures, patterns, and fixes)*
-
-### Failure Analysis
-
-| Test | Error | Root Cause | Fix |
-|------|-------|------------|-----|
-| | | | |
-
-## Scripts
-
-*(Document any helper scripts in the scripts/ directory)*
-
-## Progress
-
-- [x] Project created
-- [ ] CI jobs identified
-- [ ] Failures analyzed
-- [ ] Fixes implemented
-- [ ] CI passing
-
-## Related Source Code
-
-| Repo | Key Path | Purpose |
-|------|----------|---------|
-| *(fill in relevant code paths)* | | |
-
-## Suggested Skills
-
-<Insert from skill suggestions table>
-```
-
-### Documentation Template
-
-```markdown
-# <Documentation Task Title>
-
-## Doc Summary
-
-<Description from user input>
-
-- **Jira**: <URL>
-- **Target**: *(which docs are being created/updated)*
-
-## Target Documents
-
-| Document | Repo Path | Status |
-|----------|-----------|--------|
-| *(list docs to create or modify)* | | |
-
-## Review Notes
-
-*(Capture review feedback, technical accuracy notes, etc.)*
-
-## Progress
-
-- [x] Project created
-- [ ] Draft written
-- [ ] Technical review
-- [ ] Editorial review
-- [ ] PR submitted
-
-## Related Source Code
-
-| Repo | Key Path | Purpose |
-|------|----------|---------|
-| *(fill in relevant code paths)* | | |
-
-## Suggested Skills
-
-<Insert from skill suggestions table>
-```
-
-### Analysis/Review Template
-
-```markdown
-# <Analysis Title>
-
-## Analysis Summary
-
-<Description from user input>
-
-- **Jira**: <URL>
-- **Scope**: *(what is being analyzed/reviewed)*
-
-## Findings
-
-*(Document analysis results here)*
-
-## Recommendations
-
-*(Based on findings, what actions should be taken)*
-
-## Progress
-
-- [x] Project created
-- [ ] Analysis started
-- [ ] Findings documented
-- [ ] Recommendations made
-- [ ] Actions taken
-
-## Related Source Code
-
-| Repo | Key Path | Purpose |
-|------|----------|---------|
-| *(fill in relevant code paths)* | | |
-
-## Suggested Skills
-
-<Insert from skill suggestions table>
-```
-
----
-
-## Skill Suggestions
-
-Based on the project type, include these suggestions in the generated
-CLAUDE.md "Suggested Skills" section:
-
-### Bug Investigation
-```
-- `/prow-job:analyze-test-failure` — Analyze test failures from Prow CI jobs
-- `/prow-job:analyze-install-failure` — Analyze OpenShift installation failures
-- `/prow-job:extract-must-gather` — Extract must-gather archives from CI artifacts
-- `/feature-dev:feature-dev` — When the fix requires significant code changes
-```
-
-### Feature Development
-```
-- `/feature-dev:feature-dev` — Guided feature development with codebase analysis
-- `/pr-review-toolkit:review-pr` — Review PRs before submitting
-```
-
-### CI/Testing
-```
-- `/prow-job:analyze-test-failure` — Analyze test failures from Prow CI jobs
-- `/prow-job:analyze-install-failure` — Analyze installation failures
-- `/prow-job:analyze-resource` — Analyze Kubernetes resource lifecycle in CI artifacts
-- `/prow-job:extract-must-gather` — Extract must-gather from CI artifacts
-```
-
-### Documentation
-```
-- `/feature-dev:feature-dev` — Understand codebase to write accurate docs
-```
-
-### Analysis/Review
-```
-- `/pr-review-toolkit:review-pr` — Comprehensive PR review
-- `/prow-job:analyze-test-failure` — Analyze CI test data
-- `/feature-dev:feature-dev` — Deep codebase exploration
-```
+### Template Structure
+
+Every project CLAUDE.md follows this structure. Generate the full
+markdown using the common frontmatter above, then these sections in
+order:
+
+1. **`# <Title>`** — from JIRA ticket or user description
+2. **`## <Type> Summary`** — heading varies by type (see below),
+   followed by the user's description and metadata bullet list
+3. **Type-specific middle sections** — unique to each type (see below)
+4. **`## Progress`** — checklist starting with `- [x] Project created`,
+   then type-specific items (see below, all unchecked)
+5. **`## Related Source Code`** — table with columns: Repo, Key Path,
+   Purpose (populate from repo context files, or leave as TODO)
+6. **`## Suggested Skills`** — populate from the type-to-skill mapping
+   in Step 4b
+
+### Type-Specific Content
+
+**Bug Investigation** (`type: bug`)
+- Summary heading: `## Bug Summary`
+- Metadata: Jira, Priority (TBD), Component, Affected Version (TBD),
+  Assignee (TBD)
+- Sections: `## Attachments` (file/description table),
+  `## Timeline` (code block for event reconstruction),
+  `## Investigation Findings`, `## Root Cause`,
+  `## Fix Plan` (checklist: identify root cause, determine approach,
+  implement fix, test on cluster, submit PR)
+- Progress: Bug details captured, Logs collected and analyzed,
+  Root cause identified, Fix implemented, PR submitted
+
+**Feature Development** (`type: feature`)
+- Summary heading: `## Feature Summary`
+- Metadata: Jira, Target Version (TBD), Enhancement (link if applicable)
+- Sections: `## Design Notes` (with `### Architecture` and
+  `### API Changes` subsections),
+  `## Implementation Plan` (checklist: review enhancement doc, design
+  approach, implement changes, write tests, submit PRs),
+  `## Related PRs` (PR/repo/status/description table)
+- Progress: Design documented, Implementation started, Tests written,
+  PR(s) submitted, PR(s) merged
+
+**CI/Testing** (`type: ci-testing`)
+- Summary heading: `## Test Summary`
+- Metadata: Jira, CI Job(s), Test Suite
+- Sections: `## CI Job Links` (job/status/link table),
+  `## Test Failures` (with `### Failure Analysis` table:
+  test/error/root cause/fix), `## Scripts`
+- Progress: CI jobs identified, Failures analyzed, Fixes implemented,
+  CI passing
+
+**Documentation** (`type: docs`)
+- Summary heading: `## Doc Summary`
+- Metadata: Jira, Target (which docs are created/updated)
+- Sections: `## Target Documents` (document/repo path/status table),
+  `## Review Notes`
+- Progress: Draft written, Technical review, Editorial review,
+  PR submitted
+
+**Analysis/Review** (`type: analysis`)
+- Summary heading: `## Analysis Summary`
+- Metadata: Jira, Scope (what is being analyzed/reviewed)
+- Sections: `## Findings`, `## Recommendations`
+- Progress: Analysis started, Findings documented, Recommendations made,
+  Actions taken
 
 ---
 

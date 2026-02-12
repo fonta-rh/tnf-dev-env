@@ -1,13 +1,9 @@
 {
   "permissions": {
     "allow": [
-      "Bash(find:*)",
       "Bash(ls:*)",
-      "Bash(grep:*)",
       "Bash(wc:*)",
       "Bash(du:*)",
-      "Bash(cat:*)",
-      "Bash(echo:*)",
       "Bash(tar:*)",
       "Bash(zcat:*)",
       "Bash(zgrep:*)",
@@ -22,7 +18,6 @@
       "Bash(git add:*)",
       "Bash(git commit:*)",
       "Bash(git restore:*)",
-      "Bash(git reset:*)",
       "Bash(git stash:*)",
       "Bash(git cherry-pick:*)",
       "Bash(git rebase:*)",

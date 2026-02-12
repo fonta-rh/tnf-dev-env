@@ -44,7 +44,7 @@ parse_yaml_repos() {
     local yaml_file="$1"
 
     if command -v yq &>/dev/null; then
-        yq -r '.repos[] | [.url, .directory, .branch, .name, .category, .summary] | join("|")' "$yaml_file" 2>/dev/null
+        yq -r '.repos[] | [.url, (.directory // .name), .branch, .name, .category, .summary] | join("|")' "$yaml_file" 2>/dev/null
         return $?
     fi
 
@@ -55,24 +55,18 @@ with open('$yaml_file') as f:
     data = yaml.safe_load(f)
 for r in data.get('repos', []):
     print('|'.join([
-        r.get('url',''), r.get('directory',''), r.get('branch','main'),
+        r.get('url',''), r.get('directory', r.get('name','')), r.get('branch','main'),
         r.get('name',''), r.get('category',''), r.get('summary','')
     ]))
 " 2>/dev/null
         return $?
     fi
 
-    # Fallback: basic awk parser for the flat YAML structure
-    awk '
-    /^  - name:/ { if (url != "") print url"|"dir"|"branch"|"name"|"cat"|"summary; name=""; url=""; dir=""; branch="main"; cat=""; summary="" }
-    /^    name:/ { gsub(/^    name: *"?|"? *$/, ""); name=$0 }
-    /^    url:/ { gsub(/^    url: *"?|"? *$/, ""); url=$0 }
-    /^    directory:/ { gsub(/^    directory: *"?|"? *$/, ""); dir=$0 }
-    /^    branch:/ { gsub(/^    branch: *"?|"? *$/, ""); branch=$0 }
-    /^    category:/ { gsub(/^    category: *"?|"? *$/, ""); cat=$0 }
-    /^    summary:/ { gsub(/^    summary: *"?|"? *$/, ""); summary=$0 }
-    END { if (url != "") print url"|"dir"|"branch"|"name"|"cat"|"summary }
-    ' "$yaml_file"
+    log_error "Cannot parse dev-env.yaml: no YAML parser available."
+    log_info "Install one of the following:"
+    log_info "  yq          — https://github.com/mikefarah/yq"
+    log_info "  python3-pyyaml — dnf install python3-pyyaml  (or pip install pyyaml)"
+    return 1
 }
 
 # ─── Repo Source Detection ────────────────────────────────────────────────────
@@ -91,12 +85,21 @@ detect_repo_source() {
         REPO_SOURCE="$REPOS_FILE"
         REPO_FORMAT="txt"
     elif [[ -f "$REPOS_TEMPLATE" ]]; then
-        log_info "Creating repos.txt from template..."
-        cp "$REPOS_TEMPLATE" "$REPOS_FILE"
-        log_success "Created repos.txt — edit it to customize repo branches/paths"
-        log_warn "Consider using dev-env.yaml instead: ./setup.sh init <preset>"
-        REPO_SOURCE="$REPOS_FILE"
-        REPO_FORMAT="txt"
+        log_warn "No dev-env.yaml or repos.txt found."
+        log_warn "A legacy repos.txt.template exists with preset-specific repos."
+        log_info "Recommended: ./setup.sh init <preset>  (or copy dev-env.yaml.template)"
+        read -rp "Use legacy template to create repos.txt? [y/N] " answer
+        if [[ "$answer" == "y" || "$answer" == "Y" ]]; then
+            cp "$REPOS_TEMPLATE" "$REPOS_FILE"
+            log_success "Created repos.txt from template"
+            REPO_SOURCE="$REPOS_FILE"
+            REPO_FORMAT="txt"
+        else
+            log_info "Aborted. To get started:"
+            log_info "  ./setup.sh init <preset>  — Initialize from a preset"
+            log_info "  cp dev-env.yaml.template dev-env.yaml  — Start from template"
+            exit 0
+        fi
     else
         log_error "No repo configuration found!"
         log_info "Options:"
@@ -115,7 +118,10 @@ iterate_repos() {
 
     if [[ "$REPO_FORMAT" == "yaml" ]]; then
         while IFS='|' read -r url dir branch _name _cat _summary; do
-            [[ -z "$url" ]] && continue
+            if [[ -z "$url" || -z "$dir" ]]; then
+                [[ -n "$_name" || -n "$url" ]] && log_warn "Skipping entry with missing url or name: ${_name:-${url:-unknown}}"
+                continue
+            fi
             "$callback"
         done < <(parse_yaml_repos "$REPO_SOURCE")
     else
@@ -145,6 +151,10 @@ parse_repo_line() {
     branch="$(echo "$branch" | xargs)"
 
     [[ -z "$url" ]] && return 1
+    if [[ -z "$dir" ]]; then
+        log_warn "Skipping entry with missing directory: $url"
+        return 1
+    fi
     return 0
 }
 
@@ -172,6 +182,17 @@ clone_repo() {
     git clone --filter=blob:none --branch "$branch" "$url" "$target"
 
     log_success "Cloned $dir (branch: $branch)"
+
+    # Distribute preset context file if available and no native CLAUDE.md exists
+    if [[ ! -f "$target/CLAUDE.md" ]]; then
+        for ctx in "$PRESETS_DIR"/*/context/"$dir".md; do
+            if [[ -f "$ctx" ]]; then
+                cp "$ctx" "$target/CLAUDE.md"
+                log_info "  Added supplemental CLAUDE.md from $(basename "$(dirname "$(dirname "$ctx")")")"
+                break
+            fi
+        done
+    fi
 }
 
 # Update a single repository

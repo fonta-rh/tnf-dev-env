@@ -111,25 +111,31 @@ following the schema from `dev-env.yaml.template`.
 
 Run `./setup.sh clone` via Bash.
 
-### Step 5: Explore and Generate Context
+### Step 5: Create Context Stubs
 
-For each cloned repo that does NOT have a native CLAUDE.md, use the
-Task tool with `subagent_type=Explore` to scan the repo and generate
-a supplemental CLAUDE.md. The explore agent should extract:
+For each cloned repo that does NOT have a native CLAUDE.md, create a
+stub file at `repos/<repo-name>/CLAUDE.md` with this template:
 
-- **Purpose** (from README first line or repo description)
-- **Key paths** (entry points, main packages, src directories)
-- **Build/test commands** (from Makefile, package.json, etc.)
-- **Test directory locations**
-- **Language/framework** (from go.mod, package.json, Cargo.toml, etc.)
+```markdown
+# <repo-name>
 
-Write the generated context as `repos/<repo-name>/CLAUDE.md` with the
-header:
+<!-- TODO: Add project-specific context for this repo. -->
+<!-- Useful things to document: -->
+<!--   - What this repo does in the context of your project -->
+<!--   - Key paths and entry points relevant to your work -->
+<!--   - Build/test commands you use frequently -->
+
+## Key Paths
+
+- TODO
+
+## Notes
+
+- TODO
 ```
-<!-- Auto-generated supplemental context. Edit as needed. -->
-```
 
-For repos WITH a native CLAUDE.md, skip generation.
+For repos WITH a native CLAUDE.md, skip — the repo's own context
+takes priority.
 
 ### Step 6: Generate Root CLAUDE.md
 
@@ -137,10 +143,10 @@ Same as Mode A Step 5 — update the repo table in root CLAUDE.md.
 
 ### Step 7: Review
 
-Show the user what was generated:
+Show the user what was set up:
 - List all repos and their status
-- Show which repos got auto-generated CLAUDE.md files
-- Offer to let them review and edit any generated files
+- Show which repos got stub CLAUDE.md files (encourage filling them in)
+- Show which repos already had native CLAUDE.md files (skipped)
 
 ---
 
