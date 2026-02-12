@@ -1,35 +1,20 @@
 ---
-name: project
-description: Create and manage project workspaces for development tasks
-argument-hint: <new|resume> [description]
+name: project:new
+description: Create a new project workspace for a development task
+argument-hint: [description]
 user-invocable: true
 ---
 
-# Project Workspace Manager
+# New Project Workspace
 
-You are helping a developer manage project workspaces. Projects live
+You are helping a developer create a new project workspace. Projects live
 under the `projects/` directory and provide structured working environments
 for specific tasks (bug investigations, feature development, CI work, etc.).
 
-## Subcommand Routing
+Everything after "new" in `$ARGUMENTS` is an optional initial description
+of the task.
 
-Parse `$ARGUMENTS` to determine the subcommand (case-insensitive):
-
-- **`$ARGUMENTS` is exactly "new" or starts with "new "**: Follow the
-  [New Project](#new-project) flow below. Everything after "new " is an
-  optional initial description of the task.
-- **`$ARGUMENTS` is exactly "resume" or starts with "resume "**: Follow
-  the [Resume Project](#resume-project) flow below. Everything after
-  "resume " is an optional project name to resume directly.
-- **`$ARGUMENTS` is empty or doesn't start with a recognized
-  subcommand**: Ask the user which subcommand they want using
-  AskUserQuestion with options "new" and "resume".
-
----
-
-## New Project
-
-### Step 1: Gather Task Information
+## Step 1: Gather Task Information
 
 Ask the user questions to understand what they're working on. Use the
 AskUserQuestion tool for structured questions and encourage free-text
@@ -79,7 +64,7 @@ the repo list** from `dev-env.yaml` at the workspace root:
 Ask: "Any additional context? (PR URLs, Prow job URLs, related projects,
 etc.) Say 'no' to skip."
 
-### Step 2: Generate Folder Name
+## Step 2: Generate Folder Name
 
 Based on the gathered information:
 
@@ -91,14 +76,14 @@ Based on the gathered information:
 3. **Check if `projects/<suggestion>/` already exists** using ls. If it
    does, inform the user and ask:
    - Use a different name (suggest appending `-2`, `-3`, etc.)
-   - Resume the existing project instead (point them to `/project resume`)
+   - Resume the existing project instead (point them to `/project:resume`)
 4. Once you have a name that doesn't conflict, present the suggestion
    and ask the user to confirm or provide an alternative:
 
 > "I suggest naming the project folder: `<suggestion>`. Is that OK, or
 > would you prefer a different name?"
 
-### Step 3: Create Project Scaffold
+## Step 3: Create Project Scaffold
 
 Create the project directory and generate files based on the task type.
 
@@ -134,133 +119,12 @@ Write a `.gitignore` at `projects/<folder-name>/.gitignore` with:
 *.tar.gz
 ```
 
-### Step 4: Suggest Skills and Next Steps
+## Step 4: Suggest Skills and Next Steps
 
 After creating the project, provide a summary:
 
 1. List the files and directories created
-2. Suggest relevant skills based on the task type (see the
-   type-to-skill mapping in Resume Step 4b)
-3. Suggest concrete next steps for starting the work
-4. Remind the user they can resume this project later with
-   `/project resume`
-
----
-
-## Resume Project
-
-### Step 1: Select Project
-
-**1a. Determine project name**
-
-If the user provided a name after "resume" in the arguments (e.g.,
-`/project resume OCPBUGS-74679`), use that as the target project name.
-
-If no name was provided (`/project resume` with no arguments), scan the
-`projects/` directory using the Bash tool (`ls projects/`) and present
-all directories as options via AskUserQuestion so the user can pick one.
-
-**1b. Validate project exists**
-
-Check that `projects/<name>/` exists. If it does not:
-- Show an error: "Project `<name>` not found."
-- List all available projects from `projects/`
-- Ask the user to pick from the list or provide a corrected name
-
-### Step 2: Load Project Context
-
-Read whatever context file the project has, in priority order:
-
-**2a. Try `projects/<name>/CLAUDE.md`**
-
-If the file exists, read it in full. Then check if it starts with YAML
-frontmatter (a line that is exactly `---` followed by YAML content and
-closed by another `---`):
-- **Has frontmatter**: Parse the YAML to extract `project`, `type`,
-  `created`, `status`, `jira`, `repos`, and `related_links` fields.
-- **No frontmatter**: Treat the entire file as free-form context. Infer
-  the project type from headings or content if possible (e.g., "Bug
-  Summary" → bug, "Feature Summary" → feature).
-
-**2b. Fall back to `projects/<name>/README.md`**
-
-If no CLAUDE.md exists but README.md does, read it in full. Infer the
-project type from headings or content if possible.
-
-**2c. No context file**
-
-If neither CLAUDE.md nor README.md exists:
-- List all files in the project directory (see Step 2d)
-- Ask the user: "This project has no CLAUDE.md or README.md. Can you
-  briefly describe what this project is about so I can help you
-  continue?"
-
-**2d. List project files**
-
-In all cases, list all files in the project directory (recursively) using
-the Bash tool (`find projects/<name>/ -type f | sort`). This gives both
-you and the user a picture of what's in the project.
-
-**2e. Auto-load repo context**
-
-If the project's frontmatter contains a `repos` list (non-empty), load
-context for each repo to prime your understanding of the codebase:
-
-1. For each repo name in the `repos` list:
-   a. First, check if `repos/<repo>/CLAUDE.md` exists. If so, read it.
-   b. Otherwise, search for `presets/*/context/<repo>.md`. If found,
-      read the first match.
-   c. If neither exists, skip silently (the repo may not have context
-      files yet).
-2. After loading, briefly note to the user which repo context files
-   were loaded (e.g., "Loaded context for: cluster-etcd-operator,
-   installer").
-3. Do NOT load context for repos not listed in the project's
-   frontmatter — only load what's relevant to this project.
-
-### Step 3: Present Project Summary
-
-Display a structured summary using this format:
-
-```
-## 📂 Project: <name>
-
-| Field | Value |
-|-------|-------|
-| **Type** | <type from frontmatter, or inferred, or "Unknown"> |
-| **Created** | <date from frontmatter, or "Unknown"> |
-| **Status** | <status from frontmatter, or "Unknown"> |
-| **JIRA** | <URL from frontmatter, or "None"> |
-| **Repos** | <comma-separated list, or "None specified"> |
-
-### Files
-<list all files found in Step 2d>
-
-### Progress
-<If the context file contains checklist items (`- [x]` and `- [ ]`),
-show a summary line like: "3/6 items completed" and list the checklist
-items. If no checklist items found, say "No progress checklist found.">
-```
-
-After the summary table, confirm that the full CLAUDE.md or README.md
-content has been read into context (it was read in Step 2 — just note
-this to the user so they know the context is loaded).
-
-### Step 4: Suggest Next Steps
-
-Based on the project state, provide actionable suggestions:
-
-**4a. Next checklist item**
-
-If the context file has a Progress section with checklist items, find
-the first unchecked item (`- [ ]`) and suggest it as the immediate next
-action. For example:
-> "Based on your progress checklist, the next step is: **Logs collected
-> and analyzed**. Would you like to start on that?"
-
-**4b. Skill suggestions**
-
-Suggest relevant skills based on the project type:
+2. Suggest relevant skills based on the task type:
 
 | Type | Skills to suggest |
 |------|-------------------|
@@ -270,18 +134,9 @@ Suggest relevant skills based on the project type:
 | docs | `/feature-dev:feature-dev` |
 | analysis | `/pr-review-toolkit:review-pr`, `/prow-job:analyze-test-failure`, `/feature-dev:feature-dev` |
 
-If the type is unknown, suggest `/feature-dev:feature-dev` as a general
-starting point.
-
-**4c. Ask what to work on**
-
-End by asking the user what they'd like to work on. Use AskUserQuestion
-with contextually relevant options based on the project state. Always
-include a "Something else" option. For example, for a bug investigation
-with unchecked items:
-- "Work on next checklist item: <item>"
-- "Review/update project notes"
-- "Something else"
+3. Suggest concrete next steps for starting the work
+4. Remind the user they can resume this project later with
+   `/project:resume`
 
 ---
 
@@ -323,7 +178,7 @@ order:
 5. **`## Related Source Code`** — table with columns: Repo, Key Path,
    Purpose (populate from repo context files, or leave as TODO)
 6. **`## Suggested Skills`** — populate from the type-to-skill mapping
-   in Step 4b
+   in Step 4
 
 ### Type-Specific Content
 
@@ -382,7 +237,7 @@ order:
 - Use Bash tool only for `mkdir -p` to create directories
 - After creating the project, briefly list what was created and what
   the user should do next
-- If the user provides enough context in the initial `/project new`
+- If the user provides enough context in the initial `/project:new`
   arguments, minimize questions — only ask what's truly missing
 - The YAML frontmatter `status` field should always start as `active`
 - Use today's date for the `created` field

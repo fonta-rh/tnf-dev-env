@@ -40,11 +40,11 @@ All repositories use a fork model for contributions:
 | Skill | Usage | Description |
 |-------|-------|-------------|
 | `/dev-env setup` | Initialize or refresh dev environment | Set up from preset or custom repos |
-| `/project new` | Create a new project workspace | Structured workspace for a specific task |
-| `/project resume` | Resume an existing project | Reload context and continue work |
+| `/project:new` | Create a new project workspace | Structured workspace for a specific task |
+| `/project:resume` | Resume an existing project | Reload context and continue work |
 
 ## Preset Docs
 
 For architecture details, debugging commands, and domain concepts, see the active preset's docs under `presets/<name>/`:
 - `presets/<name>/docs/` — Architecture diagrams, debugging guides, domain concepts
-- `presets/<name>/context/<repo>.md` — Per-repo context files (loaded on demand by `/project resume`)
+- `presets/<name>/context/<repo>.md` — Per-repo context files (loaded on demand by `/project:resume`)

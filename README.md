@@ -51,8 +51,8 @@ Create your own preset by adding a directory under `presets/` with a `preset.yam
 | Skill | Description |
 |-------|-------------|
 | `/dev-env setup` | Initialize or refresh a dev environment from a preset or custom config |
-| `/project new` | Create a structured project workspace for a specific task |
-| `/project resume` | Resume an existing project with full context reload |
+| `/project:new` | Create a structured project workspace for a specific task |
+| `/project:resume` | Resume an existing project with full context reload |
 
 ## Configuration
 
