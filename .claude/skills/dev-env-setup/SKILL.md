@@ -111,6 +111,11 @@ following the schema from `dev-env.yaml.template`.
 
 Run `./setup.sh clone` via Bash.
 
+After cloning, if `.claude/settings.local.json` does not exist and
+`settings.local.json.tpl` exists at the repo root, copy it to
+`.claude/settings.local.json`. This gives the user the default
+permissions and SessionStart hook.
+
 ### Step 5: Generate Repo Context
 
 #### Step 5a — Offer context generation choice

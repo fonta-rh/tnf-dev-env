@@ -379,16 +379,22 @@ init_preset() {
     cp "$preset_dir/dev-env.yaml" "$DEV_ENV_YAML"
     log_success "Initialized dev-env.yaml from preset '$preset_name'"
 
-    if [[ -f "$preset_dir/settings.local.json.tpl" ]]; then
-        local settings_dir="$SCRIPT_DIR/.claude"
-        local settings_file="$settings_dir/settings.local.json"
-        if [[ ! -f "$settings_file" ]]; then
-            mkdir -p "$settings_dir"
-            cp "$preset_dir/settings.local.json.tpl" "$settings_file"
-            log_success "Created .claude/settings.local.json from preset template"
-        else
-            log_warn ".claude/settings.local.json already exists, skipping"
+    local settings_dir="$SCRIPT_DIR/.claude"
+    local settings_file="$settings_dir/settings.local.json"
+    if [[ ! -f "$settings_file" ]]; then
+        local settings_tpl=""
+        if [[ -f "$preset_dir/settings.local.json.tpl" ]]; then
+            settings_tpl="$preset_dir/settings.local.json.tpl"
+        elif [[ -f "$SCRIPT_DIR/settings.local.json.tpl" ]]; then
+            settings_tpl="$SCRIPT_DIR/settings.local.json.tpl"
         fi
+        if [[ -n "$settings_tpl" ]]; then
+            mkdir -p "$settings_dir"
+            cp "$settings_tpl" "$settings_file"
+            log_success "Created .claude/settings.local.json from template"
+        fi
+    else
+        log_warn ".claude/settings.local.json already exists, skipping"
     fi
 
     echo
