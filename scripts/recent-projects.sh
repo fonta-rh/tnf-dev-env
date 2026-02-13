@@ -1,8 +1,15 @@
 #!/bin/bash
 # Show the 3 most recently active projects based on file modification times.
 # Used by the SessionStart hook to give Claude and the user quick context.
+# On startup: displays to terminal via /dev/tty (clean, before TUI initializes).
+# All events: passes plain text to stdout for model context.
 
-PROJECTS_DIR="${CLAUDE_PROJECT_DIR:-.}/projects"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="${CLAUDE_PROJECT_DIR:-$(dirname "$SCRIPT_DIR")}"
+PROJECTS_DIR="$PROJECT_ROOT/projects"
+
+# Read hook input from stdin to detect event source
+source=$(timeout 0.1 jq -r '.source // empty' 2>/dev/null)
 
 # Exit silently if no projects directory
 [ -d "$PROJECTS_DIR" ] || exit 0
@@ -41,12 +48,20 @@ done
 # Sort by epoch (newest first), take top 3
 sorted=$(printf '%s\n' "${entries[@]}" | sort -t'|' -k1 -rn | head -3)
 
-echo "📂 Recent projects:"
-echo ""
-printf "  %-30s %-14s %-10s %s\n" "NAME" "TYPE" "STATUS" "LAST ACTIVE"
-printf "  %-30s %-14s %-10s %s\n" "----" "----" "------" "-----------"
+# Build the display output
+output="📂 Recent projects:"
+output+=$'\n'
+output+=$(printf "\n  %-30s %-14s %-10s %s" "NAME" "TYPE" "STATUS" "LAST ACTIVE")
+output+=$(printf "\n  %-30s %-14s %-10s %s" "----" "----" "------" "-----------")
 while IFS='|' read -r _ name type status date_str; do
-  printf "  %-30s %-14s %-10s %s\n" "$name" "$type" "$status" "$date_str"
+  output+=$(printf "\n  %-30s %-14s %-10s %s" "$name" "$type" "$status" "$date_str")
 done <<< "$sorted"
-echo ""
-echo "  Tip: /project:resume <name>"
+output+=$'\n\n  Tip: /project:resume <name>'
+
+# On startup, write directly to terminal (TUI hasn't initialized yet)
+if [ "$source" = "startup" ]; then
+  echo "$output" > /dev/tty 2>/dev/null
+fi
+
+# Always pass context to the model via stdout
+echo "$output"

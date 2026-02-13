@@ -57,16 +57,6 @@
   "hooks": {
     "SessionStart": [
       {
-        "matcher": "startup",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "\"$CLAUDE_PROJECT_DIR\"/scripts/recent-projects.sh"
-          }
-        ]
-      },
-      {
-        "matcher": "clear",
         "hooks": [
           {
             "type": "command",
