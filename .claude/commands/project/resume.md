@@ -1,8 +1,6 @@
 ---
-name: project:resume
 description: Resume an existing project workspace
 argument-hint: [project-name]
-user-invocable: true
 ---
 
 # Resume Project Workspace

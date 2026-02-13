@@ -1,8 +1,6 @@
 ---
-name: project:new
 description: Create a new project workspace for a development task
 argument-hint: [description]
-user-invocable: true
 ---
 
 # New Project Workspace
