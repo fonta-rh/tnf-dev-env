@@ -1,6 +1,6 @@
 ---
 description: Resume an existing project workspace
-argument-hint: [project-name]
+argument-hint: [name-or-number]
 ---
 
 # Resume Project Workspace
@@ -16,12 +16,23 @@ to resume directly.
 
 **1a. Determine project name**
 
-If the user provided a name after "resume" in the arguments (e.g.,
-`/project:resume OCPBUGS-74679`), use that as the target project name.
+Handle the argument in `$ARGUMENTS` using these cases:
 
-If no name was provided (`/project:resume` with no arguments), scan the
-`projects/` directory using the Bash tool (`ls projects/`) and present
-all directories as options via AskUserQuestion so the user can pick one.
+**Case A — Numeric shorthand** (e.g., `/project:resume 1`):
+If the argument is a plain integer N, run
+`scripts/recent-projects.sh --names` and pick the Nth line (1-based).
+If N is out of range (no Nth line), show an error like
+"Only M projects exist." and fall through to Case C (interactive picker).
+
+**Case B — Project name** (e.g., `/project:resume OCPBUGS-74679`):
+If the argument is a non-numeric string, use it directly as the target
+project name (current behavior).
+
+**Case C — No argument** (`/project:resume`):
+Run `scripts/recent-projects.sh --names | head -3` to get the top 3
+most recent project names. Present them as AskUserQuestion options,
+plus a "See all projects" option. If the user picks "See all projects",
+run `ls projects/` and present the full list as a second AskUserQuestion.
 
 **1b. Validate project exists**
 
