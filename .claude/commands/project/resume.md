@@ -19,20 +19,27 @@ to resume directly.
 Handle the argument in `$ARGUMENTS` using these cases:
 
 **Case A — Numeric shorthand** (e.g., `/project:resume 1`):
-If the argument is a plain integer N, run
-`scripts/recent-projects.sh --names` and pick the Nth line (1-based).
-If N is out of range (no Nth line), show an error like
-"Only M projects exist." and fall through to Case C (interactive picker).
+If the argument is a plain integer N, look in your conversation context
+for the numbered "📂 Recent projects" table produced by the SessionStart
+hook. Pick the project name on row N from that table. This avoids an
+unnecessary shell call since the hook output is already in context.
+If the table is not in context (e.g., session was cleared), fall back to
+running `scripts/recent-projects.sh --names` and pick the Nth line.
+If N is out of range, show an error like "Only M projects exist." and
+fall through to Case C (interactive picker).
 
 **Case B — Project name** (e.g., `/project:resume OCPBUGS-74679`):
 If the argument is a non-numeric string, use it directly as the target
 project name (current behavior).
 
 **Case C — No argument** (`/project:resume`):
-Run `scripts/recent-projects.sh --names | head -3` to get the top 3
-most recent project names. Present them as AskUserQuestion options,
-plus a "See all projects" option. If the user picks "See all projects",
-run `ls projects/` and present the full list as a second AskUserQuestion.
+Look in your conversation context for the "📂 Recent projects" table.
+If present, extract the project names from it (up to 3) and present
+them as AskUserQuestion options, plus a "See all projects" option.
+If the table is not in context, run
+`scripts/recent-projects.sh --names | head -3` to get the names instead.
+If the user picks "See all projects", run `ls projects/` and present
+the full list as a second AskUserQuestion.
 
 **1b. Validate project exists**
 
