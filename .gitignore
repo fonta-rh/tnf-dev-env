@@ -1,8 +1,9 @@
 # Cloned repositories directory
 repos/
 
-# User configuration (generated from template)
+# User configuration (generated from preset or template)
 repos.txt
+dev-env.yaml
 
 # Editor/IDE files
 .idea/
@@ -14,3 +15,9 @@ repos.txt
 # OS files
 .DS_Store
 Thumbs.db
+
+# Claude Code local settings (user-specific, not shared)
+.claude/settings.local.json
+
+# Working folder
+projects/
