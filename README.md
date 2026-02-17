@@ -1,8 +1,10 @@
-# Dev Environment Generator
+# Dev Environment
 
 A reusable scaffolding tool for multi-repo OpenShift development environments. Define which repositories you need in a YAML config, and this tool clones, organizes, and provides AI-assisted context for your entire workspace.
 
 Ships with a **preset system** for common development scenarios — start with a preset or build your own custom environment.
+
+Also contains skills to manage long-term projects with their own context and task management
 
 ## Quick Start
 
