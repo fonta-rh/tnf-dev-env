@@ -1,13 +1,7 @@
 #!/bin/bash
 # Show the 3 most recently active projects based on file modification times.
 # Used by the SessionStart hook to give Claude and the user quick context.
-# On startup: displays to terminal via /dev/tty (clean, before TUI initializes).
-# All events: passes plain text to stdout for model context.
-#
-# Known limitation: SessionStart hooks on source=clear silently drop all output
-# (both stdout and stderr). This is a Claude Code bug — the hook fires and runs
-# correctly, but the output is discarded. Filed upstream.
-# Only startup and resume sources produce visible/context output.
+# Output: JSON with systemMessage (user-visible) and additionalContext (model context).
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="${CLAUDE_PROJECT_DIR:-$(dirname "$SCRIPT_DIR")}"
@@ -69,22 +63,28 @@ done
 # Sort by epoch (newest first), take top 3
 sorted=$(printf '%s\n' "${entries[@]}" | sort -t'|' -k1 -rn | head -3)
 
-# Build the display output
-output="📂 Recent projects:"
-output+=$'\n'
-output+=$(printf "\n  %-3s %-30s %-14s %-10s %s" "#" "NAME" "TYPE" "STATUS" "LAST ACTIVE")
-output+=$(printf "\n  %-3s %-30s %-14s %-10s %s" "-" "----" "----" "------" "-----------")
-i=0
+# Build the display text
+output="Recent projects:\n"
+output+="\n  #   NAME                           TYPE           STATUS     LAST ACTIVE"
+output+="\n  -   ----                           ----           ------     -----------"
 while IFS='|' read -r _ name type status date_str; do
   ((i++))
-  output+=$(printf "\n  %-3s %-30s %-14s %-10s %s" "$i" "$name" "$type" "$status" "$date_str")
+  output+=$(printf '\n  %-3s %-30s %-14s %-10s %s' "$i" "$name" "$type" "$status" "$date_str")
 done <<< "$sorted"
-output+=$'\n\n  Tip: /project:resume <name-or-number>'
+output+="\n\n  Tip: /project:resume <name-or-number>"
 
-# On startup, write directly to terminal (TUI hasn't initialized yet)
-if [ "$source" = "startup" ]; then
-  echo "$output" > /dev/tty 2>/dev/null
-fi
+# Escape for JSON string (newlines → \n, quotes → \", backslashes → \\)
+json_output=$(echo -e "$output" | python3 -c 'import sys,json; print(json.dumps(sys.stdin.read().rstrip()))')
 
-# Always pass context to the model via stdout
-echo "$output"
+# Output JSON: systemMessage for user display, additionalContext for model
+cat <<EOF
+{
+  "systemMessage": ${json_output},
+  "hookSpecificOutput": {
+    "hookEventName": "SessionStart",
+    "additionalContext": ${json_output}
+  }
+}
+EOF
+
+exit 0
