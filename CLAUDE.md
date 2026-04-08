@@ -42,6 +42,7 @@ All repositories use a fork model for contributions:
 | `/dev-env-setup` | Initialize or refresh dev environment | Set up from preset or custom repos |
 | `/project:new` | Create a new project workspace | Structured workspace for a specific task |
 | `/project:resume` | Resume an existing project | Reload context and continue work |
+| `/critique` | Adversarial hypothesis review | Challenge a theory with counter-evidence and experiments |
 
 ## Preset Docs
 
