@@ -43,6 +43,7 @@ All repositories use a fork model for contributions:
 | `/project:new` | Create a new project workspace | Structured workspace for a specific task |
 | `/project:resume` | Resume an existing project | Reload context and continue work |
 | `/critique` | Adversarial hypothesis review | Challenge a theory with counter-evidence and experiments |
+| `/vet-review` | Skeptical review follow-up | Filter noise from `/review-pr` findings — vet one by one |
 
 ## Preset Docs
 
