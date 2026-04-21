@@ -1,4 +1,4 @@
-<!-- Supplemental context for TNF dev environment. Repo's native CLAUDE.md (if any) takes priority. -->
+<!-- TNF context: repo's role in the TNF ecosystem. Distributed as TNF-CONTEXT.md (if repo has native CLAUDE.md) or as CLAUDE.md (if not). -->
 
 # two-node-toolbox — TNF Context
 
