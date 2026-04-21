@@ -54,4 +54,5 @@ All repositories use a fork model for contributions:
 
 For architecture details, debugging commands, and domain concepts, see the active preset's docs under `presets/<name>/`:
 - `presets/<name>/docs/` — Architecture diagrams, debugging guides, domain concepts
-- `presets/<name>/context/<repo>.md` — Per-repo context files (loaded on demand by `/project:resume`)
+- `presets/<name>/context/<repo>.md` — TNF context files (always distributed as `TNF-CONTEXT.md`)
+- `presets/<name>/supplemental/<repo>.md` — Supplemental `CLAUDE.md` for repos that don't have their own

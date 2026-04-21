@@ -1,4 +1,4 @@
-<!-- TNF context: repo's role in the TNF ecosystem. Distributed as TNF-CONTEXT.md (if repo has native CLAUDE.md) or as CLAUDE.md (if not). -->
+<!-- TNF context: repo's role in the TNF ecosystem. Always distributed as TNF-CONTEXT.md. -->
 
 # assisted-service — TNF Context
 
