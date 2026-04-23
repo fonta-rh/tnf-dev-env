@@ -10,12 +10,22 @@ PROJECTS_DIR="$PROJECT_ROOT/projects"
 # Read hook input from stdin to detect event source
 source=$(timeout 0.1 jq -r '.source // empty' 2>/dev/null)
 
+# Check if a project's CLAUDE.md has status: done
+is_done() {
+  local claude_md="$1/CLAUDE.md"
+  [ -f "$claude_md" ] || return 1
+  local s
+  s=$(sed -n '/^---$/,/^---$/{ s/^status:[[:space:]]*//p; }' "$claude_md" 2>/dev/null)
+  [ "$s" = "done" ]
+}
+
 # --names mode: output just project names sorted by recency (machine-readable)
 if [ "${1:-}" = "--names" ]; then
   [ -d "$PROJECTS_DIR" ] || exit 0
   entries=()
   for dir in "$PROJECTS_DIR"/*/; do
     [ -d "$dir" ] || continue
+    is_done "$dir" && continue
     name=$(basename "$dir")
     newest=$(find "$dir" -type f -printf '%T@\n' 2>/dev/null | sort -rn | head -1)
     [ -z "$newest" ] && continue
@@ -34,6 +44,9 @@ entries=()
 for dir in "$PROJECTS_DIR"/*/; do
   [ -d "$dir" ] || continue
   name=$(basename "$dir")
+
+  # Skip projects marked as done
+  is_done "$dir" && continue
 
   # Find the most recently modified file inside the project
   newest=$(find "$dir" -type f -printf '%T@|%Tb %Td %TH:%TM\n' 2>/dev/null \

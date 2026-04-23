@@ -43,6 +43,7 @@ All repositories use a fork model for contributions:
 | `/dev-env-setup` | Initialize or refresh dev environment | Set up from preset or custom repos |
 | `/project:new` | Create a new project workspace | Structured workspace for a specific task |
 | `/project:resume` | Resume an existing project | Reload context and continue work |
+| `/project:close` | Close a completed project | Mark as done, add closing notes |
 | `/critique` | Adversarial hypothesis review | Challenge a theory with counter-evidence and experiments |
 | `/vet-review` | Skeptical review follow-up | Filter noise from `/review-pr` findings — vet one by one |
 | `/qc:setup` | Configure Quarterly Connection | Company, profile, GitHub, Jira setup |
