@@ -24,7 +24,7 @@ If the first token is a plain integer N, look in your conversation
 context for the numbered "Recent projects" table produced by the
 SessionStart hook. Pick the project name on row N from that table.
 If the table is not in context, fall back to running
-`scripts/recent-projects.sh --names` and pick the Nth line.
+`scripts/recent-projects.py --names` and pick the Nth line.
 If N is out of range, show an error and fall through to Case C.
 
 **Case B — Project name** (e.g., `/project:close OCPBUGS-74679`):
@@ -35,7 +35,7 @@ project name.
 Look in your conversation context for the "Recent projects" table.
 If present, extract project names that have a non-done status and
 present them as AskUserQuestion options. Include a "See all projects"
-option. If no table is in context, run `scripts/recent-projects.sh
+option. If no table is in context, run `scripts/recent-projects.py
 --names` and present those instead. If the user picks "See all
 projects", list all project directories and present as a second
 AskUserQuestion.
