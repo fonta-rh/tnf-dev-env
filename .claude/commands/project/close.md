@@ -15,41 +15,23 @@ Everything after "close" in `$ARGUMENTS` is parsed as follows:
 
 ## Step 1: Select Project
 
-**1a. Determine project name**
+**1a. Resolve project name**
 
-Handle the argument using the same cases as `/project:resume`:
+Extract the first token from `$ARGUMENTS`. Run
+`scripts/resume-project.py <first-token>` via Bash (omit the token if
+none was provided). Parse the JSON and handle by `status`:
 
-**Case A — Numeric shorthand** (e.g., `/project:close 2`):
-If the first token is a plain integer N, look in your conversation
-context for the numbered "Recent projects" table produced by the
-SessionStart hook. Pick the project name on row N from that table.
-If the table is not in context, fall back to running
-`scripts/recent-projects.py --names` and pick the Nth line.
-If N is out of range, show an error and fall through to Case C.
+- **`ok`** — use `project.name` as the target. Proceed to 1b.
+- **`no_argument`** — present the first 3 `alternatives` as
+  AskUserQuestion options plus "See all projects". Re-run with the
+  chosen name.
+- **`not_found`** / **`out_of_range`** — show `error_message`, present
+  `alternatives` as a picker, re-run with chosen name.
+- **`no_projects`** — show `error_message` and stop.
 
-**Case B — Project name** (e.g., `/project:close OCPBUGS-74679`):
-If the first token is a non-numeric string, use it as the target
-project name.
+**1b. Check current status**
 
-**Case C — No argument** (`/project:close`):
-Look in your conversation context for the "Recent projects" table.
-If present, extract project names that have a non-done status and
-present them as AskUserQuestion options. Include a "See all projects"
-option. If no table is in context, run `scripts/recent-projects.py
---names` and present those instead. If the user picks "See all
-projects", list all project directories and present as a second
-AskUserQuestion.
-
-**1b. Validate project exists**
-
-Check that `projects/<name>/` exists. If not:
-- Show an error: "Project `<name>` not found."
-- List all available projects and ask the user to pick one.
-
-**1c. Check current status**
-
-Read the project's `CLAUDE.md` and parse the frontmatter. If the
-status is already `done`:
+If `project.frontmatter.status` is `done`:
 - Inform the user: "Project `<name>` is already marked as done."
 - Ask if they'd like to update the closing notes anyway. If no, stop.
 
