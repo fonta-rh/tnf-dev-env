@@ -63,6 +63,21 @@ closed by another `---`):
   the project type from headings or content if possible (e.g., "Bug
   Summary" → bug, "Feature Summary" → feature).
 
+**2a-ii. Parse Reference Files table**
+
+Check if the CLAUDE.md contains a `## Reference Files` section with a
+markdown table (columns: `File`, `Content`). If found, parse it into a
+detail file manifest — a list of (filename, description) pairs. These
+are the project's detail files.
+
+**Do NOT read detail files yet.** The CLAUDE.md index is small; detail
+files are loaded on demand in Step 4 based on what the user wants to
+work on.
+
+If no Reference Files table exists, this is an older monolithic project.
+All content is already in context from reading the full CLAUDE.md. Note
+this internally and skip detail-file logic in Steps 3-4.
+
 **2b. Fall back to `projects/<name>/README.md`**
 
 If no CLAUDE.md exists but README.md does, read it in full. Infer the
@@ -81,6 +96,12 @@ If neither CLAUDE.md nor README.md exists:
 In all cases, list all files in the project directory (recursively) using
 the Bash tool (`find projects/<name>/ -type f | sort`). This gives both
 you and the user a picture of what's in the project.
+
+If a Reference Files manifest was parsed in Step 2a-ii, cross-reference
+the file listing against it. Note any files that exist on disk but are
+NOT in the manifest — these may be organically created files that should
+be registered. Mention them in the summary (Step 3) so the user can
+decide whether to add them to the Reference Files table.
 
 **2e. Auto-load repo context**
 
@@ -104,7 +125,7 @@ context for each repo to prime your understanding of the codebase:
 Display a structured summary using this format:
 
 ```
-## 📂 Project: <name>
+## Project: <name>
 
 | Field | Value |
 |-------|-------|
@@ -113,33 +134,80 @@ Display a structured summary using this format:
 | **Status** | <status from frontmatter, or "Unknown"> |
 | **JIRA** | <URL from frontmatter, or "None"> |
 | **Repos** | <comma-separated list, or "None specified"> |
+```
 
+**If the project has a Reference Files table** (new index format):
+
+```
+### Reference Files
+<show the Reference Files table from CLAUDE.md>
+
+<if any files on disk are NOT in the manifest, note:
+"Unregistered files: <list>. Consider adding these to Reference Files.">
+
+### Progress
+<checklist summary + items>
+```
+
+Add: "Project index loaded. Detail files will be loaded based on what
+you choose to work on."
+
+**If the project has NO Reference Files table** (older monolithic format):
+
+```
 ### Files
 <list all files found in Step 2d>
 
 ### Progress
-<If the context file contains checklist items (`- [x]` and `- [ ]`),
-show a summary line like: "3/6 items completed" and list the checklist
-items. If no checklist items found, say "No progress checklist found.">
+<checklist summary + items>
 ```
 
-After the summary table, confirm that the full CLAUDE.md or README.md
-content has been read into context (it was read in Step 2 — just note
-this to the user so they know the context is loaded).
+Add: "Full project context loaded from CLAUDE.md."
 
-## Step 4: Suggest Next Steps
+## Step 4: Suggest Next Steps and Load Context
 
-Based on the project state, provide actionable suggestions:
+This step serves two purposes: help the user pick what to work on, AND
+load the right detail files for that task.
 
-**4a. Next checklist item**
+**4a. Build task menu from checklists**
 
-If the context file has a Progress section with checklist items, find
-the first unchecked item (`- [ ]`) and suggest it as the immediate next
-action. For example:
-> "Based on your progress checklist, the next step is: **Logs collected
-> and analyzed**. Would you like to start on that?"
+Scan unchecked items (`- [ ]`) in the Progress section and any plan
+section (Fix Plan, Implementation Plan, etc.). These represent
+available tasks.
 
-**4b. Skill suggestions**
+For each unchecked item, determine which detail files are relevant by
+matching the item's text against the Reference Files descriptions.
+Use the description text to make the match — for example, an item like
+"Build custom payload" maps to a file described as "custom-payload.sh
+pipeline docs", and "Analyze CI run" maps to "CI run analysis,
+timelines."
+
+**4b. Present choices with file annotations**
+
+Use AskUserQuestion with options that show which detail files will be
+loaded. Examples for a bug project:
+
+- "Next: Build custom payload with fix (loads: ci-testing-custom-payload.md, ci-runs.md)"
+- "Continue investigation (loads: investigation.md, source-code-map.md)"
+- "Review all project notes (loads: all detail files)"
+- "Something else"
+
+The user thinks in tasks and sees filenames as metadata. If the project
+has no Reference Files table (monolithic format), skip the "loads:"
+annotations since all content is already in context.
+
+**4c. Load detail files based on choice**
+
+After the user picks a task:
+1. Read the mapped detail files using the Read tool.
+2. Confirm what was loaded: "Loaded: investigation.md, source-code-map.md"
+3. If the user picks "Review all project notes", read ALL files from the
+   Reference Files manifest.
+4. If the user picks "Something else", ask what they want to do and
+   load relevant files based on their response.
+5. If a mapped file does not exist on disk, skip it silently.
+
+**4d. Skill suggestions**
 
 Suggest relevant skills based on the project type:
 
@@ -154,15 +222,11 @@ Suggest relevant skills based on the project type:
 If the type is unknown, suggest `/feature-dev:feature-dev` as a general
 starting point.
 
-**4c. Ask what to work on**
+**4e. Reference Files convention reminder**
 
-End by asking the user what they'd like to work on. Use AskUserQuestion
-with contextually relevant options based on the project state. Always
-include a "Something else" option. For example, for a bug investigation
-with unchecked items:
-- "Work on next checklist item: <item>"
-- "Review/update project notes"
-- "Something else"
+End with a brief note: "If you create new detail files during this
+session, add them to the Reference Files table in CLAUDE.md so future
+sessions can discover them."
 
 ---
 

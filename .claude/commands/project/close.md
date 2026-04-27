@@ -86,6 +86,8 @@ Using the Edit tool, update the YAML frontmatter:
 
 If the user provided closing notes (non-empty, not "no"):
 
+Closing Notes always go in CLAUDE.md (the index), not in detail files.
+
 1. Check if a `## Closing Notes` section already exists in the file.
 2. If it exists, replace its content with the new notes.
 3. If it doesn't exist, add a `## Closing Notes` section at the end
