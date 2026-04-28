@@ -22,11 +22,11 @@ and handle by `status`:
 
 Store the `project` object from the JSON as `P` for the remaining steps.
 
-## Step 2: Load Context
+## Step 2: Load Project Index
 
 1. Read `P.context_file` using the Read tool (skip if null).
-2. Read each `P.repo_context_files[].path` using the Read tool.
-3. Tell the user which repo context files were loaded.
+2. **Do NOT read `P.repo_context_files` yet.** Store the list for on-demand
+   loading (see Step 5).
 
 ## Step 3: Present Summary
 
@@ -52,6 +52,18 @@ be loaded based on what you choose to work on."
 
 **If not:** Show `P.all_files` list. Add: "Full project context loaded."
 
+**If `P.repo_context_files` is non-empty:**
+Show an "Available Repo Context" table:
+
+```
+| Repo | Source | Path |
+|------|--------|------|
+| <repo> | <source> | `<path>` |
+```
+
+Add: "Repo context files will be loaded on demand when you work on a
+specific repo."
+
 ## Step 4: Task Selection
 
 **4a.** Build a task menu from `P.checklist.unchecked_items`. For each
@@ -73,6 +85,20 @@ Confirm what was loaded.
 
 **4e.** Remind: "If you create new detail files during this session, add
 them to the Reference Files table in CLAUDE.md."
+
+## Step 5: Lazy Repo Context Loading
+
+**Do NOT load repo context files until needed.** You have the manifest from
+`P.repo_context_files` — use it reactively:
+
+- When the user's query involves a specific repo, **read its context file
+  then** (from `P.repo_context_files` matching that repo name).
+- When a task from Step 4 maps to specific repos, load their context at
+  that point.
+- If the user asks to "load all context", comply — but default to lazy.
+
+This keeps the context window lean for multi-repo projects where you
+typically work in one repo at a time.
 
 ---
 
