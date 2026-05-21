@@ -1,6 +1,6 @@
 ---
 description: Close a project workspace and mark it as done
-argument-hint: [name-or-number] [closing notes]
+argument-hint: "[name-or-number] [closing notes]"
 ---
 
 # Close Project Workspace
