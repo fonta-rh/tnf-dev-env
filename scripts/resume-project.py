@@ -180,6 +180,23 @@ def extract_checklist(text: str) -> dict:
     }
 
 
+def resolve_preset_context(preset: str, root: Path) -> dict:
+    """Resolve the preset's context file and docs directory."""
+    if not preset:
+        return {"context_file": None, "docs": []}
+    preset_dir = root / "presets" / preset
+    ctx_file = preset_dir / "context.md"
+    context_file = str(ctx_file.relative_to(root)) if ctx_file.is_file() else None
+    docs_dir = preset_dir / "docs"
+    docs = []
+    if docs_dir.is_dir():
+        docs = [
+            {"name": p.stem, "path": str(p.relative_to(root))}
+            for p in sorted(docs_dir.glob("*.md"))
+        ]
+    return {"context_file": context_file, "docs": docs}
+
+
 def resolve_repo_context(repos: list[str], root: Path) -> list[dict[str, str]]:
     """For each repo, find the best context file (repo CLAUDE.md or preset context)."""
     results = []
@@ -312,10 +329,18 @@ def resolve_project(arg: str | None, root: Path) -> dict:
     }
     repo_context = resolve_repo_context(repos_list, root)
 
+    preset = fm.get("preset", "")
+    if isinstance(preset, list):
+        preset = preset[0] if preset else ""
+    preset_ctx = resolve_preset_context(preset, root)
+
     project_type = fm.get("type", "")
     if isinstance(project_type, list):
         project_type = project_type[0] if project_type else ""
     suggestions = SKILL_SUGGESTIONS.get(project_type, DEFAULT_SKILLS)
+
+    frontmatter = dict(fm)
+    frontmatter["repos"] = repos_list
 
     return {
         "status": "ok",
@@ -325,21 +350,15 @@ def resolve_project(arg: str | None, root: Path) -> dict:
             "context_file": context_file,
             "context_type": context_type,
             "has_frontmatter": has_frontmatter,
-            "frontmatter": {
-                "project": fm.get("project", ""),
-                "type": fm.get("type", ""),
-                "created": fm.get("created", ""),
-                "status": fm.get("status", ""),
-                "jira": fm.get("jira", ""),
-                "repos": repos_list,
-                "related_links": fm.get("related_links", []),
-            },
+            "frontmatter": frontmatter,
             "reference_files": ref_files,
             "has_reference_files": bool(ref_files),
             "all_files": all_files,
             "unregistered_files": unregistered,
             "checklist": checklist,
             "repo_context_files": repo_context,
+            "preset_context": preset_ctx["context_file"],
+            "preset_docs": preset_ctx["docs"],
             "skill_suggestions": suggestions,
         },
     }

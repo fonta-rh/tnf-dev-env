@@ -50,7 +50,8 @@ Ask which repos from this workspace are relevant. **Dynamically load
 the repo list** from `dev-env.yaml` at the workspace root:
 
 1. Read `dev-env.yaml` and extract each repo's `name` and `summary`
-   fields from the `repos:` array.
+   fields from the `repos:` array. Also extract the top-level
+   `preset:` field if present (e.g., `preset: tnf`).
 2. Build AskUserQuestion options with multiSelect=true, using
    `name` as the label and `summary` as the description.
 3. If `dev-env.yaml` does not exist or has no repos, skip this step
@@ -175,6 +176,7 @@ type: <bug|feature|ci-testing|docs|analysis>
 created: <YYYY-MM-DD>
 status: active
 jira: <URL or "none">
+preset: <preset name from dev-env.yaml, or omit if none>
 repos:
   - <repo1>
   - <repo2>

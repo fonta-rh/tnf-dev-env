@@ -25,8 +25,11 @@ Store the `project` object from the JSON as `P` for the remaining steps.
 ## Step 2: Load Project Index
 
 1. Read `P.context_file` using the Read tool (skip if null).
-2. **Do NOT read `P.repo_context_files` yet.** Store the list for on-demand
-   loading (see Step 5).
+2. If `P.preset_context` is non-null, read it immediately using the Read
+   tool. This is a short orientation file (~20-30 lines) that provides
+   essential context about the preset's system architecture.
+3. **Do NOT read `P.repo_context_files` or `P.preset_docs` yet.** Store
+   both lists for on-demand loading (see Step 5).
 
 ## Step 3: Present Summary
 
@@ -64,6 +67,17 @@ Show an "Available Repo Context" table:
 Add: "Repo context files will be loaded on demand when you work on a
 specific repo."
 
+**If `P.preset_docs` is non-empty:**
+Show a "Preset Docs" table:
+
+```
+| Doc | Path |
+|-----|------|
+| <name> | `<path>` |
+```
+
+Add: "Preset docs available for deeper reference (architecture, debugging)."
+
 ## Step 4: Task Selection
 
 **4a.** Build a task menu from `P.checklist.unchecked_items`. For each
@@ -86,15 +100,19 @@ Confirm what was loaded.
 **4e.** Remind: "If you create new detail files during this session, add
 them to the Reference Files table in CLAUDE.md."
 
-## Step 5: Lazy Repo Context Loading
+## Step 5: Lazy Context Loading
 
-**Do NOT load repo context files until needed.** You have the manifest from
-`P.repo_context_files` — use it reactively:
+**Do NOT load repo context files or preset docs until needed.** You have
+the manifests from `P.repo_context_files` and `P.preset_docs` — use them
+reactively:
 
 - When the user's query involves a specific repo, **read its context file
   then** (from `P.repo_context_files` matching that repo name).
 - When a task from Step 4 maps to specific repos, load their context at
   that point.
+- When the user's query involves cross-repo interactions, architecture
+  understanding, or debugging on a live cluster, **load the relevant
+  preset doc** from `P.preset_docs`.
 - If the user asks to "load all context", comply — but default to lazy.
 
 This keeps the context window lean for multi-repo projects where you
