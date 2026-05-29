@@ -80,6 +80,7 @@ def collect_projects(projects_dir: Path) -> list[dict]:
 
 
 def main():
+    """Entry point: output recent non-done projects as JSON or plain names."""
     project_root = Path(os.environ.get("CLAUDE_PROJECT_DIR", Path(__file__).resolve().parent.parent))
     projects_dir = project_root / "projects"
 
