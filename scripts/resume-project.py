@@ -198,7 +198,7 @@ def resolve_preset_context(preset: str, root: Path) -> dict:
 
 
 def resolve_repo_context(repos: list[str], root: Path) -> list[dict[str, str]]:
-    """For each repo, find the best context file (repo CLAUDE.md or preset context)."""
+    """For each repo, find context files (repo CLAUDE.md and/or preset context)."""
     results = []
     for repo in repos:
         repo_claude = root / "repos" / repo / "CLAUDE.md"
@@ -208,7 +208,6 @@ def resolve_repo_context(repos: list[str], root: Path) -> list[dict[str, str]]:
                 "path": str(repo_claude.relative_to(root)),
                 "source": "repo",
             })
-            continue
 
         matches = glob.glob(str(root / "presets" / "*" / "context" / f"{repo}.md"))
         if matches:
