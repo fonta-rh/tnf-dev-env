@@ -14,12 +14,12 @@
 - Pacemaker/etcd integration testing
 
 **Key TNF paths**:
-- `test/extended/two_node/` - Main TNF test directory
+- `test/extended/edge_topologies/` - Main TNF test directory (renamed from `two_node/` in origin#30623)
   - `tnf_topology.go` - General TNF topology tests
   - `tnf_recovery.go` - Recovery scenario testing
   - `tnf_node_replacement.go` - Node replacement tests
   - `tnf_degraded.go` - Degraded mode testing
-- `test/extended/two_node/utils/common.go` - Test utilities
+- `test/extended/edge_topologies/utils/common.go` - Test utilities
 
 **Running tests**:
 - Tests require a **running TNF cluster** — they are E2E tests that interact with real cluster
