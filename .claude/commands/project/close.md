@@ -51,6 +51,79 @@ If no notes were provided in the arguments, ask the user:
 > "Any closing notes for this project? (outcome, resolution, links to
 > PRs, etc.) Say 'no' to skip."
 
+## Step 2.5: Worktree Cleanup
+
+Read the project's CLAUDE.md frontmatter. If `worktrees:` is present,
+non-empty, and `branch:` is set:
+
+**2.5a. Check worktree status**
+
+For each repo in `worktrees:`, check its status:
+
+```bash
+wt_path="repos/<repo>/.worktrees/<branch>"
+if [ -d "$wt_path" ]; then
+  git -C "$wt_path" status --porcelain
+  git -C "$wt_path" rev-list --count @{upstream}..HEAD 2>/dev/null
+fi
+```
+
+Display a status summary:
+
+```
+| Repo | Branch | Status |
+|------|--------|--------|
+```
+
+**2.5b. Handle dirty worktrees**
+
+If any worktree has uncommitted changes, warn the user and ask:
+
+> "The following worktrees have uncommitted changes:
+>   - `<repo>` (`<branch>`): N modified files
+>
+> What would you like to do?"
+
+Use AskUserQuestion with options:
+- "Commit and push changes before closing"
+- "Discard changes and remove worktrees"
+- "Keep worktrees (close project but leave them in place)"
+
+If "commit and push": help the user commit and push in each dirty
+worktree before proceeding.
+
+**2.5c. Handle unpushed commits**
+
+If any worktree has unpushed commits (ahead > 0) but is otherwise
+clean, warn:
+
+> "`<repo>` has N unpushed commits on branch `<branch>`. Push before
+> removing?"
+
+**2.5d. Remove worktrees**
+
+Unless the user chose to keep worktrees:
+
+```bash
+git -C repos/<repo> worktree remove .worktrees/<branch>
+```
+
+For non-PR branches, also offer to delete the local branch:
+```bash
+git -C repos/<repo> branch -d <branch>
+```
+
+Skip branch deletion for PR branches (those starting with `pr/`) since
+they are remote refs.
+
+**2.5e. Update frontmatter**
+
+If worktrees were removed, the `worktrees:` field will be cleared
+in Step 3b (set to `worktrees: []`).
+
+If worktrees were kept, leave the field as-is and add a note to the
+closing summary: "Worktrees preserved — branches still active in repos."
+
 ## Step 3: Update Project CLAUDE.md
 
 **3a. Read the current CLAUDE.md**
@@ -65,6 +138,9 @@ Using the Edit tool, update the YAML frontmatter:
    `status: done`
 2. Add a `closed: <YYYY-MM-DD>` field (today's date) after the
    `status` line. If a `closed:` field already exists, update it.
+3. If worktrees were removed in Step 2.5, change the `worktrees:`
+   list to `worktrees: []`. Leave `branch:` as-is for historical
+   reference.
 
 **3c. Add closing notes section**
 

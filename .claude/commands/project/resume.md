@@ -47,6 +47,28 @@ Display a structured summary:
 | **Repos** | <comma-separated P.frontmatter.repos, or "None specified"> |
 ```
 
+**If `P.worktree_status` is non-empty:**
+Show a worktree status table:
+
+```
+| Repo | Branch | Status | Path |
+|------|--------|--------|------|
+| <repo> | <branch> | <status> | `<path>` |
+```
+
+Where `<status>` is:
+- `clean` — worktree exists, no uncommitted changes
+- `dirty (N files)` — worktree exists with uncommitted changes
+- `ahead by N` — worktree has unpushed commits (append to clean/dirty)
+- `MISSING` — declared in frontmatter but worktree directory not found
+
+If any worktree is MISSING, add:
+> "Worktree for `<repo>` is missing. Recreate with:
+> `git -C repos/<repo> worktree add .worktrees/<branch> <branch>`"
+
+Add: "When working on code changes, use the worktree paths above
+instead of the main checkout."
+
 **If `P.has_reference_files`:**
 Show the reference files table from `P.reference_files`. If
 `P.unregistered_files` is non-empty, note them. Show checklist progress
@@ -95,9 +117,13 @@ project — all content is already in context from Step 2).
 **4c.** After the user picks, read the mapped detail files using Read.
 Confirm what was loaded.
 
-**4d.** Suggest relevant skills from `P.skill_suggestions`.
+**4d.** If `P.worktree_status` is non-empty and the selected task
+involves a repo with a worktree, remind which path to use:
+> "Working directory for `<repo>`: `repos/<repo>/.worktrees/<branch>/`"
 
-**4e.** Remind: "If you create new detail files during this session, add
+**4e.** Suggest relevant skills from `P.skill_suggestions`.
+
+**4f.** Remind: "If you create new detail files during this session, add
 them to the Reference Files table in CLAUDE.md."
 
 ## Step 5: Lazy Context Loading

@@ -220,6 +220,54 @@ def resolve_repo_context(repos: list[str], root: Path) -> list[dict[str, str]]:
     return results
 
 
+def resolve_worktree_status(
+    worktree_repos: list[str], branch: str, root: Path
+) -> list[dict]:
+    """Check status of declared worktrees for each repo."""
+    if not branch or not worktree_repos:
+        return []
+
+    results = []
+    for repo in worktree_repos:
+        wt_path = root / "repos" / repo / ".worktrees" / branch
+        entry: dict = {
+            "repo": repo,
+            "branch": branch,
+            "path": f"repos/{repo}/.worktrees/{branch}",
+            "exists": False,
+            "dirty": False,
+            "dirty_count": 0,
+            "ahead": 0,
+        }
+        if not wt_path.is_dir():
+            results.append(entry)
+            continue
+
+        entry["exists"] = True
+
+        status_result = subprocess.run(
+            ["git", "-C", str(wt_path), "status", "--porcelain"],
+            capture_output=True, text=True,
+        )
+        if status_result.returncode == 0 and status_result.stdout.strip():
+            lines = [l for l in status_result.stdout.splitlines() if l.strip()]
+            entry["dirty"] = True
+            entry["dirty_count"] = len(lines)
+
+        ahead_result = subprocess.run(
+            ["git", "-C", str(wt_path), "rev-list", "--count", f"@{{upstream}}..HEAD"],
+            capture_output=True, text=True,
+        )
+        if ahead_result.returncode == 0 and ahead_result.stdout.strip():
+            try:
+                entry["ahead"] = int(ahead_result.stdout.strip())
+            except ValueError:
+                pass
+
+        results.append(entry)
+    return results
+
+
 def get_recent_names(root: Path) -> list[str]:
     """Get recent non-done project names via recent-projects.py --names."""
     script = root / "scripts" / "recent-projects.py"
@@ -341,6 +389,14 @@ def resolve_project(arg: str | None, root: Path) -> dict:
     frontmatter = dict(fm)
     frontmatter["repos"] = repos_list
 
+    branch = fm.get("branch", "")
+    if isinstance(branch, list):
+        branch = branch[0] if branch else ""
+    worktree_repos = fm.get("worktrees", [])
+    if isinstance(worktree_repos, str):
+        worktree_repos = [worktree_repos] if worktree_repos else []
+    worktree_status = resolve_worktree_status(worktree_repos, branch, root)
+
     return {
         "status": "ok",
         "project": {
@@ -359,6 +415,9 @@ def resolve_project(arg: str | None, root: Path) -> dict:
             "preset_context": preset_ctx["context_file"],
             "preset_docs": preset_ctx["docs"],
             "skill_suggestions": suggestions,
+            "branch": branch,
+            "worktree_repos": worktree_repos,
+            "worktree_status": worktree_status,
         },
     }
 
