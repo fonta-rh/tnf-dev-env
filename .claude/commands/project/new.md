@@ -58,10 +58,83 @@ the repo list** from `dev-env.yaml` at the workspace root:
    and note that no repos are configured (the user can add them
    later by editing the project's CLAUDE.md frontmatter).
 
-**1e. Additional Context (optional)**
+**1e. Worktree Setup**
+
+If the project type is `feature`, `bug`, or `docs`, and repos were
+selected in Step 1d:
+
+1. Ask which repos the user plans to **modify** (vs. reference-only).
+   Use AskUserQuestion with multiSelect=true, listing the repos
+   selected in Step 1d:
+
+   > "Which of these repos will you be making changes to? (The others
+   > will be available for reference but won't get a worktree.)"
+
+   If only one repo was selected in 1d, skip this question and assume
+   it will be modified.
+
+2. Derive the branch name:
+   - If JIRA was provided, extract the ticket ID (e.g., `OCPEDGE-2608`)
+     and ask the user for a short slug to append:
+     > "Branch name will start with `<jira-id>`. Add a short slug?
+     > (e.g., `multi-hypervisor` → `ocpedge-2608-multi-hypervisor`)"
+   - If no JIRA, use the project folder name as the branch name
+   - For `bug` type, prefix with `fix/`
+     (e.g., `fix/ocpbugs-84336-port-race`)
+   - Confirm the final branch name with the user
+
+3. For each repo the user plans to modify, create a worktree:
+
+   ```bash
+   # Ensure .worktrees/ is excluded from git tracking
+   grep -qF '.worktrees' repos/<repo>/.git/info/exclude 2>/dev/null \
+     || echo '.worktrees/' >> repos/<repo>/.git/info/exclude
+
+   # Determine the default branch (main or master)
+   default_branch=$(git -C repos/<repo> symbolic-ref refs/remotes/origin/HEAD \
+     2>/dev/null | sed 's|refs/remotes/origin/||')
+   if [ -z "$default_branch" ]; then
+     for candidate in main master; do
+       if git -C repos/<repo> rev-parse --verify "origin/$candidate" \
+         >/dev/null 2>&1; then
+         default_branch="$candidate"; break
+       fi
+     done
+   fi
+
+   # Create the worktree
+   git -C repos/<repo> worktree add \
+     .worktrees/<branch> -b <branch> origin/$default_branch
+   ```
+
+4. Store the branch name and worktree repos for Step 3b (frontmatter).
+
+For `ci-testing` and `analysis`: do NOT create worktrees in this step.
+Worktrees for these types are handled in Step 1f (analysis-PR) or
+created manually later if needed.
+
+**1f. Additional Context (optional)**
 
 Ask: "Any additional context? (PR URLs, Prow job URLs, related projects,
 etc.) Say 'no' to skip."
+
+**If the project type is `analysis` and the user provided a PR URL:**
+
+Extract the repo and PR number, then create a worktree:
+
+1. Parse repo from URL (e.g., `cluster-etcd-operator` from
+   `https://github.com/openshift/cluster-etcd-operator/pull/1620`)
+2. Fetch and create a worktree for the PR:
+
+   ```bash
+   grep -qF '.worktrees' repos/<repo>/.git/info/exclude 2>/dev/null \
+     || echo '.worktrees/' >> repos/<repo>/.git/info/exclude
+   git -C repos/<repo> fetch origin pull/<number>/head:pr/<number>
+   git -C repos/<repo> worktree add .worktrees/pr/<number> pr/<number>
+   ```
+
+3. Store `branch: pr/<number>` and the repo in worktrees list.
+4. Add the PR URL to `related_links:` in frontmatter.
 
 ## Step 2: Generate Folder Name
 
@@ -144,7 +217,13 @@ section below for the starter content of each file.
 After creating the project, provide a summary:
 
 1. List the files and directories created
-2. Suggest relevant skills based on the task type:
+2. If worktrees were created, list them with their paths:
+   > **Worktrees created:**
+   > - `repos/<repo>/.worktrees/<branch>/` → branch `<branch>`
+   >
+   > When working on code changes, use the worktree paths above
+   > instead of the main checkout (`repos/<repo>/`).
+3. Suggest relevant skills based on the task type:
 
 | Type | Skills to suggest |
 |------|-------------------|
@@ -154,8 +233,8 @@ After creating the project, provide a summary:
 | docs | `/feature-dev:feature-dev` |
 | analysis | `/pr-review-toolkit:review-pr`, `/prow-job:analyze-test-failure`, `/feature-dev:feature-dev` |
 
-3. Suggest concrete next steps for starting the work
-4. Remind the user they can resume this project later with
+4. Suggest concrete next steps for starting the work
+5. Remind the user they can resume this project later with
    `/project:resume`
 
 ---
@@ -180,6 +259,12 @@ preset: <preset name from dev-env.yaml, or omit if none>
 repos:
   - <repo1>
   - <repo2>
+branch: <branch-name or omit if no worktrees>
+worktrees:
+  - <repo1>
+# worktrees: subset of repos that have active worktrees (from Step 1e)
+# branch: the branch name used for all worktrees
+# Omit both if no worktrees were created (ci-testing, analysis non-PR)
 related_links:
   - <any URLs provided>
 # If user provided no URLs, use: related_links: []

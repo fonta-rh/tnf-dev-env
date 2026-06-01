@@ -51,6 +51,79 @@ If no notes were provided in the arguments, ask the user:
 > "Any closing notes for this project? (outcome, resolution, links to
 > PRs, etc.) Say 'no' to skip."
 
+## Step 2.5: Worktree Cleanup
+
+If `P.worktree_status` (from Step 1's resume-project.py output) is
+non-empty:
+
+**2.5a. Display worktree status**
+
+Show a status summary from `P.worktree_status`:
+
+```
+| Repo | Branch | Status |
+|------|--------|--------|
+```
+
+Where status is derived from each entry in `P.worktree_status`:
+- `exists=false` → `MISSING` (already gone, skip cleanup)
+- `error` is non-null → `ERROR: <message>`
+- `dirty=true` and `ahead > 0` → `dirty (N files), ahead by N`
+- `dirty=true` → `dirty (N files)`
+- `no_upstream=true` → `no upstream (local-only commits)`
+- `ahead > 0` → `ahead by N`
+- otherwise → `clean`
+
+**2.5b. Handle worktrees needing attention**
+
+If any worktree is dirty, has unpushed commits (`ahead > 0`), or has
+no upstream (`no_upstream=true`), warn the user:
+
+> "The following worktrees need attention before removal:
+>   - `<repo>` (`<branch>`): <status detail>
+>
+> What would you like to do?"
+
+Use AskUserQuestion with options:
+- "Commit and push changes before closing"
+- "Discard changes and remove worktrees"
+- "Keep worktrees (close project but leave them in place)"
+
+If "commit and push": help the user commit and push in each worktree.
+For `no_upstream` branches, push with `-u` to set the upstream:
+`git -C <worktree-path> push -u fork <branch>`
+
+**2.5c. Remove worktrees**
+
+Unless the user chose to keep worktrees, remove each existing worktree:
+
+```bash
+# If user chose "Discard changes" (worktree may be dirty):
+git -C repos/<repo> worktree remove --force .worktrees/<branch>
+# If worktree is clean (user chose "Commit and push" or was already clean):
+git -C repos/<repo> worktree remove .worktrees/<branch>
+```
+
+For non-PR branches (those NOT starting with `pr/`), also offer to
+delete the local branch:
+```bash
+git -C repos/<repo> branch -d <branch>
+```
+
+For PR checkout branches (`pr/<number>`), just delete the local branch
+— these are local refs created from the remote PR, not remote branches:
+```bash
+git -C repos/<repo> branch -D pr/<number>
+```
+
+**2.5d. Update frontmatter**
+
+If worktrees were removed, the `worktrees:` field will be cleared
+in Step 3b (set to `worktrees: []`).
+
+If worktrees were kept, leave the field as-is and add a note to the
+closing summary: "Worktrees preserved — branches still active in repos."
+
 ## Step 3: Update Project CLAUDE.md
 
 **3a. Read the current CLAUDE.md**
@@ -65,6 +138,9 @@ Using the Edit tool, update the YAML frontmatter:
    `status: done`
 2. Add a `closed: <YYYY-MM-DD>` field (today's date) after the
    `status` line. If a `closed:` field already exists, update it.
+3. If worktrees were removed in Step 2.5, change the `worktrees:`
+   list to `worktrees: []`. Leave `branch:` as-is for historical
+   reference.
 
 **3c. Add closing notes section**
 

@@ -47,6 +47,37 @@ Display a structured summary:
 | **Repos** | <comma-separated P.frontmatter.repos, or "None specified"> |
 ```
 
+**If `P.worktree_status` is non-empty:**
+Show a worktree status table:
+
+```
+| Repo | Branch | Status | Path |
+|------|--------|--------|------|
+| <repo> | <branch> | <status> | `<path>` |
+```
+
+Where `<status>` is derived from each entry in `P.worktree_status`:
+- `exists=false` → `MISSING`
+- `error` is non-null → `ERROR: <message>`
+- `dirty=true` and `ahead > 0` → `dirty (N files), ahead by N`
+- `dirty=true` → `dirty (N files)`
+- `no_upstream=true` → `no upstream (local-only commits)`
+- `ahead > 0` → `ahead by N`
+- otherwise → `clean`
+
+If any worktree is MISSING, suggest how to recreate it:
+- For PR branches (starting with `pr/`):
+  > "Worktree for `<repo>` is missing. Recreate with:
+  > `git -C repos/<repo> fetch origin pull/<N>/head:pr/<N> &&
+  >  git -C repos/<repo> worktree add .worktrees/pr/<N> pr/<N>`"
+- For dev branches:
+  > "Worktree for `<repo>` is missing. Recreate with:
+  > `git -C repos/<repo> worktree add .worktrees/<branch> -b <branch>
+  >  origin/<default-branch>`"
+
+Add: "When working on code changes, use the worktree paths above
+instead of the main checkout."
+
 **If `P.has_reference_files`:**
 Show the reference files table from `P.reference_files`. If
 `P.unregistered_files` is non-empty, note them. Show checklist progress
@@ -95,9 +126,13 @@ project — all content is already in context from Step 2).
 **4c.** After the user picks, read the mapped detail files using Read.
 Confirm what was loaded.
 
-**4d.** Suggest relevant skills from `P.skill_suggestions`.
+**4d.** If `P.worktree_status` is non-empty and the selected task
+involves a repo with a worktree, remind which path to use:
+> "Working directory for `<repo>`: `repos/<repo>/.worktrees/<branch>/`"
 
-**4e.** Remind: "If you create new detail files during this session, add
+**4e.** Suggest relevant skills from `P.skill_suggestions`.
+
+**4f.** Remind: "If you create new detail files during this session, add
 them to the Reference Files table in CLAUDE.md."
 
 ## Step 5: Lazy Context Loading
