@@ -238,6 +238,8 @@ def resolve_worktree_status(
             "dirty": False,
             "dirty_count": 0,
             "ahead": 0,
+            "no_upstream": False,
+            "error": None,
         }
         if not wt_path.is_dir():
             results.append(entry)
@@ -245,24 +247,33 @@ def resolve_worktree_status(
 
         entry["exists"] = True
 
-        status_result = subprocess.run(
-            ["git", "-C", str(wt_path), "status", "--porcelain"],
-            capture_output=True, text=True,
-        )
-        if status_result.returncode == 0 and status_result.stdout.strip():
-            lines = [l for l in status_result.stdout.splitlines() if l.strip()]
-            entry["dirty"] = True
-            entry["dirty_count"] = len(lines)
+        try:
+            status_result = subprocess.run(
+                ["git", "-C", str(wt_path), "status", "--porcelain"],
+                capture_output=True, text=True,
+            )
+            if status_result.returncode != 0:
+                entry["error"] = f"git status failed: {status_result.stderr.strip()}"
+            elif status_result.stdout.strip():
+                lines = [l for l in status_result.stdout.splitlines() if l.strip()]
+                entry["dirty"] = True
+                entry["dirty_count"] = len(lines)
 
-        ahead_result = subprocess.run(
-            ["git", "-C", str(wt_path), "rev-list", "--count", f"@{{upstream}}..HEAD"],
-            capture_output=True, text=True,
-        )
-        if ahead_result.returncode == 0 and ahead_result.stdout.strip():
-            try:
-                entry["ahead"] = int(ahead_result.stdout.strip())
-            except ValueError:
-                pass
+            upstream_check = subprocess.run(
+                ["git", "-C", str(wt_path), "rev-parse", "--verify", "@{upstream}"],
+                capture_output=True, text=True,
+            )
+            if upstream_check.returncode != 0:
+                entry["no_upstream"] = True
+            else:
+                ahead_result = subprocess.run(
+                    ["git", "-C", str(wt_path), "rev-list", "--count", "@{upstream}..HEAD"],
+                    capture_output=True, text=True,
+                )
+                if ahead_result.returncode == 0 and ahead_result.stdout.strip():
+                    entry["ahead"] = int(ahead_result.stdout.strip())
+        except (OSError, ValueError) as exc:
+            entry["error"] = str(exc)
 
         results.append(entry)
     return results

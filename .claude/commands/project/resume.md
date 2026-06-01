@@ -56,15 +56,24 @@ Show a worktree status table:
 | <repo> | <branch> | <status> | `<path>` |
 ```
 
-Where `<status>` is:
-- `clean` — worktree exists, no uncommitted changes
-- `dirty (N files)` — worktree exists with uncommitted changes
-- `ahead by N` — worktree has unpushed commits (append to clean/dirty)
-- `MISSING` — declared in frontmatter but worktree directory not found
+Where `<status>` is derived from each entry in `P.worktree_status`:
+- `exists=false` → `MISSING`
+- `error` is non-null → `ERROR: <message>`
+- `dirty=true` and `ahead > 0` → `dirty (N files), ahead by N`
+- `dirty=true` → `dirty (N files)`
+- `no_upstream=true` → `no upstream (local-only commits)`
+- `ahead > 0` → `ahead by N`
+- otherwise → `clean`
 
-If any worktree is MISSING, add:
-> "Worktree for `<repo>` is missing. Recreate with:
-> `git -C repos/<repo> worktree add .worktrees/<branch> <branch>`"
+If any worktree is MISSING, suggest how to recreate it:
+- For PR branches (starting with `pr/`):
+  > "Worktree for `<repo>` is missing. Recreate with:
+  > `git -C repos/<repo> fetch origin pull/<N>/head:pr/<N> &&
+  >  git -C repos/<repo> worktree add .worktrees/pr/<N> pr/<N>`"
+- For dev branches:
+  > "Worktree for `<repo>` is missing. Recreate with:
+  > `git -C repos/<repo> worktree add .worktrees/<branch> -b <branch>
+  >  origin/<default-branch>`"
 
 Add: "When working on code changes, use the worktree paths above
 instead of the main checkout."
