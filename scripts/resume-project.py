@@ -5,6 +5,7 @@ Usage: resume-project.py [project-name-or-number]
 Output: JSON to stdout (see resolve_project for schema).
 """
 
+import datetime
 import glob
 import json
 import os
@@ -12,6 +13,9 @@ import re
 import subprocess
 import sys
 from pathlib import Path
+from typing import Any
+
+import yaml
 
 SKILL_SUGGESTIONS: dict[str, list[str]] = {
     "bug": [
@@ -44,8 +48,8 @@ DEFAULT_SKILLS = ["/feature-dev:feature-dev"]
 ALWAYS_PRESENT = {"CLAUDE.md", "README.md", ".gitignore"}
 
 
-def parse_frontmatter(path: Path) -> dict[str, str | list[str]]:
-    """Extract YAML frontmatter, handling both scalar values and lists."""
+def parse_frontmatter(path: Path) -> dict[str, Any]:
+    """Extract YAML frontmatter between --- delimiters."""
     try:
         lines = path.read_text().splitlines()
     except OSError:
@@ -54,43 +58,53 @@ def parse_frontmatter(path: Path) -> dict[str, str | list[str]]:
     if not lines or lines[0].strip() != "---":
         return {}
 
-    result: dict[str, str | list[str]] = {}
-    current_list_key: str | None = None
-
+    fm_lines: list[str] = []
     for line in lines[1:]:
         if line.strip() == "---":
             break
-
-        if line.startswith("  - ") and current_list_key:
-            val = line.strip().removeprefix("- ")
-            lst = result[current_list_key]
-            if isinstance(lst, list):
-                lst.append(val)
-            continue
-
-        current_list_key = None
-
-        if ":" not in line:
-            continue
-
-        key, _, value = line.partition(":")
-        key = key.strip()
-        value = value.strip()
-
-        if value == "[]":
-            result[key] = []
-            continue
-
-        if not value:
-            result[key] = []
-            current_list_key = key
-            continue
-
-        result[key] = value
+        fm_lines.append(line)
     else:
         return {}
 
+    try:
+        result = yaml.safe_load("\n".join(fm_lines))
+    except yaml.YAMLError:
+        return {}
+    if not isinstance(result, dict):
+        return {}
+    for k, v in result.items():
+        if isinstance(v, (datetime.date, datetime.datetime)):
+            result[k] = str(v)
     return result
+
+
+def normalize_worktrees(raw: Any, fallback_branch: str) -> list[dict[str, str]]:
+    """Normalize any worktree frontmatter format to list[dict] with repo, branch, path."""
+    if not raw:
+        return []
+    if isinstance(raw, str):
+        raw = [raw]
+    if isinstance(raw, dict):
+        return [
+            {"repo": str(repo), "branch": str(branch),
+             "path": f"repos/{repo}/.worktrees/{branch}"}
+            for repo, branch in raw.items()
+        ]
+    if isinstance(raw, list):
+        result: list[dict[str, str]] = []
+        for item in raw:
+            if isinstance(item, dict):
+                repo = str(item.get("repo", ""))
+                branch = str(item.get("branch", fallback_branch))
+                path = str(item.get("path", f"repos/{repo}/.worktrees/{branch}"))
+                result.append({"repo": repo, "branch": branch, "path": path})
+            else:
+                item = str(item)
+                result.append(
+                    {"repo": item, "branch": fallback_branch,
+                     "path": f"repos/{item}/.worktrees/{fallback_branch}"})
+        return result
+    return []
 
 
 def parse_reference_files(text: str) -> list[dict[str, str]]:
@@ -221,19 +235,19 @@ def resolve_repo_context(repos: list[str], root: Path) -> list[dict[str, str]]:
 
 
 def resolve_worktree_status(
-    worktree_repos: list[str], branch: str, root: Path
+    worktrees: list[dict[str, str]], root: Path
 ) -> list[dict]:
-    """Check status of declared worktrees for each repo."""
-    if not branch or not worktree_repos:
+    """Check status of declared worktrees."""
+    if not worktrees:
         return []
 
     results = []
-    for repo in worktree_repos:
-        wt_path = root / "repos" / repo / ".worktrees" / branch
+    for wt in worktrees:
+        wt_path = root / wt["path"]
         entry: dict = {
-            "repo": repo,
-            "branch": branch,
-            "path": f"repos/{repo}/.worktrees/{branch}",
+            "repo": wt["repo"],
+            "branch": wt["branch"],
+            "path": wt["path"],
             "exists": False,
             "dirty": False,
             "dirty_count": 0,
@@ -403,10 +417,9 @@ def resolve_project(arg: str | None, root: Path) -> dict:
     branch = fm.get("branch", "")
     if isinstance(branch, list):
         branch = branch[0] if branch else ""
-    worktree_repos = fm.get("worktrees", [])
-    if isinstance(worktree_repos, str):
-        worktree_repos = [worktree_repos] if worktree_repos else []
-    worktree_status = resolve_worktree_status(worktree_repos, branch, root)
+    worktrees = normalize_worktrees(fm.get("worktrees", []), branch)
+    worktree_repos = [wt["repo"] for wt in worktrees]
+    worktree_status = resolve_worktree_status(worktrees, root)
 
     return {
         "status": "ok",
@@ -437,7 +450,7 @@ def main():
     root = Path(os.environ.get("CLAUDE_PROJECT_DIR", Path(__file__).resolve().parent.parent))
     arg = sys.argv[1] if len(sys.argv) > 1 else None
     result = resolve_project(arg, root)
-    print(json.dumps(result, indent=2))
+    print(json.dumps(result, indent=2, default=str))
 
 
 if __name__ == "__main__":
