@@ -66,7 +66,10 @@ def parse_frontmatter(path: Path) -> dict[str, Any]:
     else:
         return {}
 
-    result = yaml.safe_load("\n".join(fm_lines))
+    try:
+        result = yaml.safe_load("\n".join(fm_lines))
+    except yaml.YAMLError:
+        return {}
     if not isinstance(result, dict):
         return {}
     for k, v in result.items():
@@ -83,7 +86,7 @@ def normalize_worktrees(raw: Any, fallback_branch: str) -> list[dict[str, str]]:
         raw = [raw]
     if isinstance(raw, dict):
         return [
-            {"repo": repo, "branch": branch,
+            {"repo": str(repo), "branch": str(branch),
              "path": f"repos/{repo}/.worktrees/{branch}"}
             for repo, branch in raw.items()
         ]
@@ -95,7 +98,8 @@ def normalize_worktrees(raw: Any, fallback_branch: str) -> list[dict[str, str]]:
                 branch = str(item.get("branch", fallback_branch))
                 path = str(item.get("path", f"repos/{repo}/.worktrees/{branch}"))
                 result.append({"repo": repo, "branch": branch, "path": path})
-            elif isinstance(item, str):
+            else:
+                item = str(item)
                 result.append(
                     {"repo": item, "branch": fallback_branch,
                      "path": f"repos/{item}/.worktrees/{fallback_branch}"})
@@ -446,7 +450,7 @@ def main():
     root = Path(os.environ.get("CLAUDE_PROJECT_DIR", Path(__file__).resolve().parent.parent))
     arg = sys.argv[1] if len(sys.argv) > 1 else None
     result = resolve_project(arg, root)
-    print(json.dumps(result, indent=2))
+    print(json.dumps(result, indent=2, default=str))
 
 
 if __name__ == "__main__":
