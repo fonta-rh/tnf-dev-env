@@ -5,12 +5,13 @@ argument-hint: [name-or-number]
 
 # Update Project Documentation
 
-Update a project's CLAUDE.md based on what was accomplished in the
-current conversation. This is a **scoped write** — apply edits directly.
+Update a project's documentation based on what was accomplished in the
+current conversation. Apply edits directly.
 
 ## Scope Rules
 
-**Update ONLY:** `projects/<name>/CLAUDE.md`
+**Update:** files under `projects/<name>/` — CLAUDE.md (index, checklists,
+progress) and detail files (investigation notes, test results, plans, etc.).
 
 **NEVER touch during this command:**
 - Memory files (`memory/MEMORY.md`, `memory/project_*.md`)
@@ -35,15 +36,17 @@ Review the conversation history and identify:
 
 1. **Checklist items completed** — `- [ ]` items now done.
 2. **New checklist items** — work discovered or queued.
-3. **New detail files** — files created in `projects/<name>/` not yet in
-   the Reference Files table.
-4. **Progress entries** — milestones or outcomes to append.
+3. **Detail file updates** — new findings, test results, or analysis to
+   add to existing detail files, or new detail files to create.
+4. **New detail files in Reference Files table** — files created in
+   `projects/<name>/` not yet registered in CLAUDE.md's table.
+5. **Progress entries** — milestones or outcomes to append.
 
 If nothing to update, say so and stop.
 
 ## Step 4: Apply
 
-Use the Edit tool to apply changes to `projects/<name>/CLAUDE.md`.
-Make each edit individually — do not rewrite the entire file.
+Use the Edit tool for existing files. Use the Write tool for new detail
+files. Edit each file individually — do not rewrite entire files.
 
 Summarize what was updated.
