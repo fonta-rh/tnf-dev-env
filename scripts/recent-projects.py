@@ -52,15 +52,18 @@ def newest_mtime(directory: Path) -> float | None:
     return newest
 
 
+TERMINAL_STATUSES = {"done", "complete", "closed"}
+
+
 def collect_projects(projects_dir: Path) -> list[dict]:
     """Collect non-done projects with their metadata and mtime."""
     entries = []
     for d in sorted(projects_dir.iterdir()):
-        if not d.is_dir():
+        if not d.is_dir() or d.name.startswith("."):
             continue
 
         fm = parse_frontmatter(d / "CLAUDE.md")
-        if fm.get("status") == "done":
+        if fm.get("status", "").lower() in TERMINAL_STATUSES:
             continue
 
         mtime = newest_mtime(d)

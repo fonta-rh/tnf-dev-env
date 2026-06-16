@@ -14,6 +14,7 @@ current conversation. Apply edits directly.
 progress) and detail files (investigation notes, test results, plans, etc.).
 
 **NEVER touch during this command:**
+- The `status:` frontmatter field — use `/project:close` to change it
 - Memory files (`memory/MEMORY.md`, `memory/project_*.md`)
 - Internal session tasks (TaskCreate / TaskUpdate)
 - Repo source files under `repos/`

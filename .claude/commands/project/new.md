@@ -248,6 +248,8 @@ when resuming the project.
 
 ### Common Frontmatter
 
+Valid `status` values: `active`, `blocked`, `done` (set only by `/project:close`).
+
 ```yaml
 ---
 project: <folder-name>
