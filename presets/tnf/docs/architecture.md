@@ -55,6 +55,22 @@
 - **Learner node**: etcd node waiting to become a full voting member
 - **STONITH**: "Shoot The Other Node In The Head" — fencing mechanism
 
+## OpenShift IPI Naming Chain
+
+BMH names, Machine names, and K8s node names are all different in OpenShift IPI:
+
+| Layer | Pattern | Example |
+|-------|---------|---------|
+| BMH (BareMetalHost) | `<cluster>-<role>-<idx>` | `ostest-master-0` |
+| Machine | `<cluster>-<infraID>-<role>-<idx>` | `ostest-abc12-master-0` |
+| K8s Node | from `MASTER_HOSTNAME_FORMAT` | `master-0` |
+
+CEO looks up fencing credential secrets by **K8s node name**, not BMH name. When working with fencing credentials, STONITH configs, or any code that matches secrets/configs to nodes, verify which naming layer is expected. Check `oc get nodes` vs `oc get bmh -n openshift-machine-api` to confirm.
+
+## etcd Runtime on TNF
+
+On TNF clusters, etcd is managed by **podman** after handover to Pacemaker — NOT by CRI-O static pods as in standard OCP. The podman-etcd OCF resource agent manages the container lifecycle. Use `podman logs etcd` and `podman ps -a | grep etcd` for debugging, not `crictl`.
+
 ## Failure Scenarios
 
 1. **Network failure**: Pacemaker fences one node, survivor restarts etcd as cluster-of-one

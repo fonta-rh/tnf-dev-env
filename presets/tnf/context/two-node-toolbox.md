@@ -69,3 +69,15 @@ ansible-playbook setup.yml -i inventory.ini      # Deploy cluster
 - Ansible, make, jq, rsync, golang
 - Pull secret from cloud.redhat.com
 - CI_TOKEN for CI builds
+
+## Cluster Access Patterns
+
+**Hypervisor access**: The `[metal_machine]` group in `inventory.ini` defines the hypervisor (AWS EC2 instance). SSH via `make ssh`.
+
+**Cluster VM access**: The `[cluster_vms]` group lists cluster nodes. SSH via ProxyJump through the hypervisor, user=`core`.
+
+**Operational gotchas**:
+- Inventory hostnames (e.g. `ostest_master_0`) ARE the virsh domain names on the hypervisor
+- Inventory may list nodes in arbitrary order (master_1 before master_0) — never use array index as master number
+- RHCOS VMs don't have qemu-guest-agent — use `ssh core@<ip> "sudo systemctl poweroff"` not `virsh shutdown`
+- Pacemaker stop sequence takes 4-8 minutes on TNF nodes — use 600s timeout for graceful shutdown

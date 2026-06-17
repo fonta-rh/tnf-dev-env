@@ -45,6 +45,14 @@
 - `pkg/tnf/pkg/jobs/jobcontroller_test.go`
 - `pkg/tnf/pkg/tools/redact_test.go`
 
+## etcd TLS Certificate Handling
+
+etcd 3.6+ reloads TLS certificates from disk on every new TLS handshake via Go's `GetCertificate` / `GetClientCertificate` callbacks ([PR #7829](https://github.com/etcd-io/etcd/pull/7829)). No `--tls-reload-interval` flag exists — it's automatic.
+
+**Known issue**: [etcd #9541](https://github.com/etcd-io/etcd/issues/9541) — certs with IP-only SANs (no DNS names) may not trigger reload. OCP 4.22+ certs include DNS names (`etcd.kube-system.svc`, `localhost`, etc.) alongside IPs, so this does not apply.
+
+**Implication for TNF**: The podman-etcd monitor does not need to trigger a restart on cert file changes. Updating the stored hash and returning SUCCESS is sufficient. Real TLS failures are caught by `monitor_cmd_exec`. Certs are bind-mounted from host `/etc/kubernetes/static-pod-resources/etcd-certs/` into the podman container at `/etc/kubernetes/static-pod-certs/`.
+
 **Commands**:
 ```bash
 make build                    # Build binaries
