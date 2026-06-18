@@ -21,7 +21,10 @@ Extract the first token from `$ARGUMENTS`. Run
 `scripts/resume-project.py <first-token>` via Bash (omit the token if
 none was provided). Parse the JSON and handle by `status`:
 
-- **`ok`** — use `project.name` as the target. Proceed to 1b.
+- **`ok`** — use `project.name` as the target. Store the top-level
+  `root` field as the **workspace root** — all paths in `project` are
+  relative to it. **Always join `root` + relative path** for absolute
+  paths in Read/Bash. Proceed to 1b.
 - **`no_argument`** — check if a project was loaded earlier in this
   conversation (e.g., via `/project:resume`). If so, use that project
   name as the default: re-run the script with that name and proceed.

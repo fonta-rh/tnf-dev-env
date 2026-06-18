@@ -423,6 +423,7 @@ def resolve_project(arg: str | None, root: Path) -> dict:
 
     return {
         "status": "ok",
+        "root": str(root),
         "project": {
             "name": project_name,
             "dir": str(project_dir.relative_to(root)),

@@ -21,6 +21,10 @@ and handle by `status`:
 - **`no_projects`** — show `error_message` and stop.
 
 Store the `project` object from the JSON as `P` for the remaining steps.
+Store the top-level `root` field as the **workspace root**. All paths in
+`P` (context_file, repo_context_files, worktree paths, preset docs, etc.)
+are relative to this root. **Always join `root` + relative path** to form
+absolute paths when using the Read tool or Bash commands.
 
 ## Step 2: Load Project Index
 
