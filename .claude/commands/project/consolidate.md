@@ -12,11 +12,18 @@ and a pointer line in each section for recent context.
 Sections with 10+ completed `- [x]` items qualify. Unchecked items,
 strikethroughs, and non-checklist content are never touched.
 
+## Step 0: Locate Workspace Root
+
+The workspace root is the directory containing this `.claude/` folder.
+Determine it from the path of this command file and store it as `ROOT`.
+All script calls below MUST use `$ROOT/scripts/...` — never relative
+paths, since the working directory may be inside a worktree.
+
 ## Step 1: Resolve Project
 
 Extract the first token from `$ARGUMENTS`. Run
-`scripts/resume-project.py <first-token>` via Bash (omit the token if
-none was provided). Parse the JSON and handle by `status`:
+`python3 $ROOT/scripts/resume-project.py <first-token>` via Bash (omit
+the token if none was provided). Parse the JSON and handle by `status`:
 
 - **`ok`** — use `project.name` as the target. Proceed to Step 2.
 - **`no_argument`** — check if a project was loaded earlier in this
@@ -31,7 +38,7 @@ none was provided). Parse the JSON and handle by `status`:
 
 Run via Bash:
 ```
-python3 scripts/consolidate-project.py --dry-run <project-name>
+python3 $ROOT/scripts/consolidate-project.py --dry-run <project-name>
 ```
 
 Parse the JSON output:
@@ -58,7 +65,7 @@ Ask: "Proceed with consolidation?"
 
 Run via Bash:
 ```
-python3 scripts/consolidate-project.py <project-name>
+python3 $ROOT/scripts/consolidate-project.py <project-name>
 ```
 
 Parse the JSON output.
