@@ -495,6 +495,11 @@ _Analysis results._
 
 ## Important Notes
 
+- **Use absolute paths for ALL Bash commands.** Compute the workspace
+  root once (e.g., `/home/<user>/Workspace/tnf-dev-env`) and prefix
+  every `repos/`, `projects/`, and `git -C` path with it. Shell state
+  does not persist between Bash tool calls, so relative paths break
+  when a prior command changes the working directory.
 - Always use the Write tool to create files, never echo/cat via Bash
 - Use Bash tool only for `mkdir -p` to create directories
 - After creating the project, briefly list what was created and what
