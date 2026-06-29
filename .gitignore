@@ -21,3 +21,7 @@ Thumbs.db
 
 # Working folder
 projects/
+
+# Scratch / working files
+.work/
+auth.json
