@@ -13,7 +13,7 @@ qualify. The last 3 completed items are kept for context. Unchecked
 items are never touched.
 
 **Narrative archiving**: `### ` subsections that are pure prose (no
-checklist items) are archived when a section accumulates 20+ lines
+checklist items) are archived when a section accumulates 10+ lines
 of archivable narrative. The most recent qualifying subsection is
 kept. Structural sections (Reference Files, Feature Summary, etc.)
 are never touched.
