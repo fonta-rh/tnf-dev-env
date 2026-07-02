@@ -20,13 +20,28 @@ from typing import Any
 
 THRESHOLD = 10
 KEEP_RECENT = 3
+NARRATIVE_THRESHOLD = 20
+NARRATIVE_KEEP_RECENT = 1
+NARRATIVE_MIN_LINES = 5
 ARCHIVE_FILENAME = "progress-archive.md"
 SENTINEL = "consolidated in `progress-archive.md`"
+NARRATIVE_SENTINEL = "subsections consolidated in `progress-archive.md`"
+
+STRUCTURAL_SECTIONS = {
+    "reference files", "related source code", "suggested skills",
+    "closing notes", "bug summary", "feature summary", "test summary",
+    "doc summary", "ci job links", "attachments", "scripts",
+    "related prs", "related projects", "gcs access", "worktree",
+    "worktree paths", "outline", "notes", "file inventory",
+}
 
 RE_HEADING = re.compile(r"^## (.+)$")
+RE_H3_HEADING = re.compile(r"^### (.+)$")
 RE_CHECKED = re.compile(r"^\s*- \[x\] .+$")
 RE_UNCHECKED = re.compile(r"^\s*- \[ \] .+$")
 RE_STRIKETHROUGH = re.compile(r"^\s*- ~~?.+~~?\s*$")
+RE_POINTER_COUNT = re.compile(r"\((\d+) items")
+RE_NARRATIVE_POINTER_COUNT = re.compile(r"\((\d+) subsections")
 
 
 @dataclass
@@ -37,12 +52,47 @@ class Item:
 
 
 @dataclass
+class Subsection:
+    heading: str
+    start_idx: int
+    end_idx: int
+    items: list[Item] = field(default_factory=list)
+
+    @property
+    def checked(self) -> list[Item]:
+        return [i for i in self.items if i.kind == "checked"]
+
+    @property
+    def unchecked(self) -> list[Item]:
+        return [i for i in self.items if i.kind == "unchecked"]
+
+    @property
+    def line_count(self) -> int:
+        return self.end_idx - self.start_idx
+
+    @property
+    def is_complete(self) -> bool:
+        return len(self.unchecked) == 0
+
+    @property
+    def is_pure_narrative(self) -> bool:
+        return not self.checked and not self.unchecked and self.line_count >= NARRATIVE_MIN_LINES
+
+
+def is_structural_section(name: str) -> bool:
+    lower = name.lower()
+    return any(lower.startswith(s) for s in STRUCTURAL_SECTIONS)
+
+
+@dataclass
 class Section:
     name: str
     start_idx: int
     end_idx: int  # exclusive
     items: list[Item] = field(default_factory=list)
     has_sentinel: bool = False
+    has_narrative_sentinel: bool = False
+    subsections: list[Subsection] = field(default_factory=list)
 
     @property
     def checked(self) -> list[Item]:
@@ -58,7 +108,25 @@ class Section:
 
     @property
     def qualifies(self) -> bool:
-        return len(self.checked) >= THRESHOLD and not self.has_sentinel
+        return self.qualifies_checklist or self.qualifies_narrative
+
+    @property
+    def qualifies_checklist(self) -> bool:
+        return len(self.checked) >= THRESHOLD
+
+    @property
+    def qualifies_narrative(self) -> bool:
+        if is_structural_section(self.name):
+            return False
+        archivable = self.archivable_narrative_subsections
+        if len(archivable) <= NARRATIVE_KEEP_RECENT:
+            return False
+        to_archive = archivable[:-NARRATIVE_KEEP_RECENT]
+        return sum(s.line_count for s in to_archive) >= NARRATIVE_THRESHOLD
+
+    @property
+    def archivable_narrative_subsections(self) -> list:
+        return [s for s in self.subsections if s.is_pure_narrative]
 
 
 def classify_line(line: str) -> str:
@@ -90,12 +158,52 @@ def parse_sections(lines: list[str]) -> list[Section]:
             current.items.append(Item(line_idx=idx, text=line, kind=kind))
             if SENTINEL in line:
                 current.has_sentinel = True
+            if NARRATIVE_SENTINEL in line:
+                current.has_narrative_sentinel = True
 
     if current is not None:
         current.end_idx = len(lines)
         sections.append(current)
 
     return sections
+
+
+def parse_subsections(section: Section, lines: list[str]) -> None:
+    current_sub: Subsection | None = None
+    in_code_block = False
+
+    for item in section.items:
+        line = lines[item.line_idx]
+
+        if line.startswith("```"):
+            in_code_block = not in_code_block
+            if current_sub is not None:
+                current_sub.items.append(item)
+            continue
+
+        if in_code_block:
+            if current_sub is not None:
+                current_sub.items.append(item)
+            continue
+
+        m = RE_H3_HEADING.match(line)
+        if m:
+            if current_sub is not None:
+                current_sub.end_idx = item.line_idx
+                section.subsections.append(current_sub)
+            current_sub = Subsection(
+                heading=m.group(1).strip(),
+                start_idx=item.line_idx,
+                end_idx=section.end_idx,
+            )
+            continue
+
+        if current_sub is not None:
+            current_sub.items.append(item)
+
+    if current_sub is not None:
+        current_sub.end_idx = section.end_idx
+        section.subsections.append(current_sub)
 
 
 def parse_reference_table(text: str) -> tuple[bool, bool, int]:
@@ -158,32 +266,106 @@ def build_archive_block(section: Section, today: str) -> str:
     return "\n".join(lines)
 
 
-def build_replacement(section: Section, today: str) -> list[str]:
-    """Build replacement lines for a consolidated section (excluding the ## heading)."""
+def build_narrative_archive_block(
+    section: Section,
+    subsections: list[Subsection],
+    lines: list[str],
+    today: str,
+) -> str:
+    total_lines = sum(s.line_count for s in subsections)
+    block_lines = [
+        f"## {section.name} — narrative (archived {today})",
+        "",
+        f"{len(subsections)} subsections ({total_lines} lines) archived from CLAUDE.md.",
+        "",
+    ]
+    for sub in subsections:
+        for idx in range(sub.start_idx, sub.end_idx):
+            block_lines.append(lines[idx])
+        block_lines.append("")
+
+    return "\n".join(block_lines)
+
+
+def _extract_old_count(items: list[Item], sentinel_text: str, pattern: re.Pattern) -> int:
+    for item in items:
+        if sentinel_text in item.text:
+            m = pattern.search(item.text)
+            if m:
+                return int(m.group(1))
+    return 0
+
+
+def build_replacement(
+    section: Section,
+    today: str,
+    lines: list[str] | None = None,
+    narrative_to_archive: list[Subsection] | None = None,
+) -> list[str]:
     checked = section.checked
     to_archive_set = set()
     if len(checked) > KEEP_RECENT:
         for item in checked[:-KEEP_RECENT]:
             to_archive_set.add(item.line_idx)
 
-    archived_count = len(to_archive_set)
-    pointer = f"_Earlier items consolidated in `{ARCHIVE_FILENAME}` ({archived_count} items, {today})._"
+    old_checklist_count = _extract_old_count(section.items, SENTINEL, RE_POINTER_COUNT)
+    archived_count = len(to_archive_set) + old_checklist_count
 
-    result = ["", pointer, ""]
+    remove_set = set(to_archive_set)
 
-    kept_items = [item for item in section.items if item.line_idx not in to_archive_set]
-    # Strip leading blank lines from kept items (the pointer line already adds spacing)
+    if narrative_to_archive:
+        for sub in narrative_to_archive:
+            for idx in range(sub.start_idx, sub.end_idx):
+                remove_set.add(idx)
+
+    old_narrative_count = _extract_old_count(
+        section.items, NARRATIVE_SENTINEL, RE_NARRATIVE_POINTER_COUNT,
+    )
+    narrative_count = (
+        len(narrative_to_archive) + old_narrative_count if narrative_to_archive
+        else old_narrative_count
+    )
+
+    result = [""]
+    if archived_count > 0:
+        pointer = (
+            f"_Earlier items consolidated in `{ARCHIVE_FILENAME}` "
+            f"({archived_count} items, {today})._"
+        )
+        result.append(pointer)
+    if narrative_count > 0:
+        narrative_pointer = (
+            f"_Earlier subsections consolidated in `{ARCHIVE_FILENAME}` "
+            f"({narrative_count} subsections, {today})._"
+        )
+        result.append(narrative_pointer)
+    result.append("")
+
+    kept_items = [
+        item for item in section.items
+        if item.line_idx not in remove_set
+        and SENTINEL not in item.text
+        and NARRATIVE_SENTINEL not in item.text
+    ]
     while kept_items and kept_items[0].kind == "other" and not kept_items[0].text.strip():
         kept_items.pop(0)
     for item in kept_items:
         result.append(item.text)
 
-    # Trim trailing blank lines, keep one
     while len(result) > 1 and result[-1] == "":
         result.pop()
     result.append("")
 
     return result
+
+
+def _compute_narrative_plan(section: Section) -> tuple[list[Subsection], list[Subsection]]:
+    if not section.qualifies_narrative:
+        return [], []
+    archivable = section.archivable_narrative_subsections
+    to_archive = archivable[:-NARRATIVE_KEEP_RECENT]
+    to_keep = archivable[-NARRATIVE_KEEP_RECENT:]
+    return to_archive, to_keep
 
 
 def consolidate(project_dir: Path, dry_run: bool = False) -> dict[str, Any]:
@@ -197,8 +379,11 @@ def consolidate(project_dir: Path, dry_run: bool = False) -> dict[str, Any]:
     text = claude_md.read_text()
     lines = text.splitlines()
     sections = parse_sections(lines)
-    qualifying = [s for s in sections if s.qualifies]
 
+    for s in sections:
+        parse_subsections(s, lines)
+
+    qualifying = [s for s in sections if s.qualifies]
     project_name = project_dir.name
 
     if not qualifying:
@@ -207,23 +392,37 @@ def consolidate(project_dir: Path, dry_run: bool = False) -> dict[str, Any]:
             "status": "already_lean",
             "project": project_name,
             "claude_md_lines": len(lines),
-            "message": f"Nothing to consolidate ({total_checked} completed items across all sections, none exceeding threshold of {THRESHOLD}).",
+            "message": (
+                f"Nothing to consolidate ({total_checked} completed items "
+                f"across all sections, none exceeding threshold of {THRESHOLD})."
+            ),
             "sections": [],
         }
 
-    section_info = []
+    section_plans: list[dict[str, Any]] = []
     for s in qualifying:
-        to_archive = max(0, len(s.checked) - KEEP_RECENT)
-        section_info.append({
+        checklist_to_archive = max(0, len(s.checked) - KEEP_RECENT)
+        narrative_to_archive, narrative_to_keep = _compute_narrative_plan(s)
+        section_plans.append({
+            "section": s,
             "name": s.name,
             "checked": len(s.checked),
-            "to_archive": to_archive,
+            "to_archive": checklist_to_archive,
             "to_keep": min(len(s.checked), KEEP_RECENT),
             "unchecked": len(s.unchecked),
             "strikethrough": len(s.strikethrough),
+            "narrative_subsections": len(s.archivable_narrative_subsections),
+            "narrative_to_archive": len(narrative_to_archive),
+            "narrative_to_keep": len(narrative_to_keep),
+            "narrative_lines": sum(sub.line_count for sub in narrative_to_archive),
+            "_narrative_subs": narrative_to_archive,
         })
 
     if dry_run:
+        section_info = [
+            {k: v for k, v in sp.items() if k not in ("section", "_narrative_subs")}
+            for sp in section_plans
+        ]
         return {
             "status": "needs_consolidation",
             "project": project_name,
@@ -234,16 +433,19 @@ def consolidate(project_dir: Path, dry_run: bool = False) -> dict[str, Any]:
 
     today = date.today().isoformat()
 
-    # Build archive content
     archive_blocks = []
-    for s in qualifying:
-        archive_blocks.append(build_archive_block(s, today))
+    for sp in section_plans:
+        s = sp["section"]
+        if sp["to_archive"] > 0:
+            archive_blocks.append(build_archive_block(s, today))
+        if sp["_narrative_subs"]:
+            archive_blocks.append(
+                build_narrative_archive_block(s, sp["_narrative_subs"], lines, today)
+            )
 
-    # Write or append archive file
     archive_path = project_dir / ARCHIVE_FILENAME
     if archive_path.is_file():
         existing = archive_path.read_text()
-        # Check for duplicate sections (same name + same date)
         new_blocks = []
         for block in archive_blocks:
             header_line = block.splitlines()[0]
@@ -258,17 +460,16 @@ def consolidate(project_dir: Path, dry_run: bool = False) -> dict[str, Any]:
         header = (
             "# Progress Archive\n"
             "\n"
-            "_Completed checklist items archived from CLAUDE.md by\n"
-            "`/project:consolidate`. Items grouped by source section,\n"
-            "ordered chronologically (oldest first)._\n"
+            "_Completed checklist items and narrative subsections archived\n"
+            "from CLAUDE.md by `/project:consolidate`. Items grouped by\n"
+            "source section, ordered chronologically (oldest first)._\n"
             "\n"
         )
         archive_path.write_text(header + "\n".join(archive_blocks))
         archive_action = "created"
 
-    # Rebuild CLAUDE.md with consolidated sections
     new_lines: list[str] = []
-    qualifying_by_start = {s.start_idx: s for s in qualifying}
+    qualifying_by_start = {sp["section"].start_idx: sp for sp in section_plans}
     skip_until: int | None = None
 
     for idx, line in enumerate(lines):
@@ -277,11 +478,15 @@ def consolidate(project_dir: Path, dry_run: bool = False) -> dict[str, Any]:
         skip_until = None
 
         if idx in qualifying_by_start:
-            section = qualifying_by_start[idx]
-            new_lines.append(line)  # keep the ## heading
-            replacement = build_replacement(section, today)
+            sp = qualifying_by_start[idx]
+            s = sp["section"]
+            new_lines.append(line)
+            replacement = build_replacement(
+                s, today, lines,
+                narrative_to_archive=sp["_narrative_subs"] or None,
+            )
             new_lines.extend(replacement)
-            skip_until = section.end_idx
+            skip_until = s.end_idx
         else:
             new_lines.append(line)
 
@@ -289,11 +494,10 @@ def consolidate(project_dir: Path, dry_run: bool = False) -> dict[str, Any]:
     if not new_text.endswith("\n"):
         new_text += "\n"
 
-    # Update Reference Files table
     has_table, archive_listed, last_row_idx = parse_reference_table(new_text)
     ref_updated = False
     if has_table and not archive_listed and last_row_idx >= 0:
-        ref_line = f"| `{ARCHIVE_FILENAME}` | Archived completed checklist items |"
+        ref_line = f"| `{ARCHIVE_FILENAME}` | Archived completed checklist items and narrative subsections |"
         ref_lines = new_text.splitlines()
         ref_lines.insert(last_row_idx + 1, ref_line)
         new_text = "\n".join(ref_lines)
@@ -307,8 +511,15 @@ def consolidate(project_dir: Path, dry_run: bool = False) -> dict[str, Any]:
         "status": "consolidated",
         "project": project_name,
         "sections": [
-            {"name": si["name"], "archived": si["to_archive"], "kept": si["to_keep"]}
-            for si in section_info
+            {
+                "name": sp["name"],
+                "archived": sp["to_archive"],
+                "kept": sp["to_keep"],
+                "narrative_archived": sp["narrative_to_archive"],
+                "narrative_kept": sp["narrative_to_keep"],
+                "narrative_lines": sp["narrative_lines"],
+            }
+            for sp in section_plans
         ],
         "claude_md_before": len(lines),
         "claude_md_after": len(new_text.splitlines()),

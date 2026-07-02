@@ -1,16 +1,22 @@
 ---
-description: Consolidate bloated project CLAUDE.md by archiving completed checklist items
+description: Consolidate bloated project CLAUDE.md by archiving completed checklist items and narrative subsections
 argument-hint: [name-or-number]
 ---
 
 # Consolidate Project CLAUDE.md
 
-Archive completed checklist items from bloated sections into a
-`progress-archive.md` detail file. Keeps the last 3 completed items
-and a pointer line in each section for recent context.
+Archive completed checklist items and completed narrative subsections
+from bloated sections into a `progress-archive.md` detail file.
 
-Sections with 10+ completed `- [x]` items qualify. Unchecked items,
-strikethroughs, and non-checklist content are never touched.
+**Checklist archiving**: Sections with 10+ completed `- [x]` items
+qualify. The last 3 completed items are kept for context. Unchecked
+items are never touched.
+
+**Narrative archiving**: `### ` subsections that are pure prose (no
+checklist items) are archived when a section accumulates 20+ lines
+of archivable narrative. The most recent qualifying subsection is
+kept. Structural sections (Reference Files, Feature Summary, etc.)
+are never touched.
 
 ## Step 0: Locate Workspace Root
 
@@ -52,12 +58,14 @@ Parse the JSON output:
 Show the consolidation plan from the dry-run `sections` array:
 
 ```
-Sections to consolidate in `<project>`:
+Sections to consolidate in `<project>` (<claude_md_lines> lines):
 
-| Section | Checked | To Archive | Keep | Unchecked | Strikethrough |
-|---------|---------|------------|------|-----------|---------------|
-| <name>  | <N>     | <N>        | <N>  | <N>       | <N>           |
+| Section | Items → Archive | Subsections → Archive | Lines Freed |
+|---------|----------------|-----------------------|-------------|
+| <name>  | <to_archive>   | <narrative_to_archive> (<narrative_lines> lines) | ~<to_archive + narrative_lines> |
 ```
+
+Omit zero-value columns when no sections have that type of archiving.
 
 Ask: "Proceed with consolidation?"
 
@@ -77,6 +85,7 @@ From the result JSON, display:
 ```
 Consolidated `<project>`:
 - <section>: <archived> items archived, <kept> kept
+  [if narrative] + <narrative_archived> subsections (<narrative_lines> lines) archived, <narrative_kept> kept
 - ...
 - CLAUDE.md: <before> → <after> lines
 - Archive: progress-archive.md (<action>)
